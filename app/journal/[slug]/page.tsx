@@ -21,8 +21,10 @@ const articlesData = [
           videos are delivered from web platforms directly to satellite
           channels, the audio mix often falls apart. This is primarily due to
           the unregulated freedom of the web versus the stringent{" "}
-          <strong>LUFS (Loudness Units Full Scale)</strong> standards of
-          broadcasting.
+          <strong className="text-white">
+            LUFS (Loudness Units Full Scale)
+          </strong>{" "}
+          standards of broadcasting.
         </p>
 
         <h3 className="text-2xl font-display text-white mt-10 mb-4">
@@ -33,11 +35,12 @@ const articlesData = [
           loudness level of -14 to -15 LUFS, with a peak level of -1 dBTP.
           However, when generating a master file for a television network, the
           global standard (such as EBU R128 or ATSC A/85) strictly dictates a
-          target of <strong>-23 LUFS (or -24 LKFS)</strong>, with a maximum true
-          peak level restricted to -2.0 dBTP.
+          target of{" "}
+          <strong className="text-white">-23 LUFS (or -24 LKFS)</strong>, with a
+          maximum true peak level restricted to -2.0 dBTP.
         </p>
 
-        <div className="bg-bg-panel border-l-2 border-gold-primary p-6 my-8 font-mono text-xs uppercase tracking-wider text-gold-primary/90">
+        <div className="bg-bg-panel border-l-2 border-gold-primary p-6 my-8 font-mono text-xs uppercase tracking-wider text-gold-primary/90 shadow-[0_0_15px_rgba(212,175,55,0.05)]">
           ⚠️ CRITICAL PROTOCOL: If the True Peak exceeds -2.0 dBTP in even a
           single frame, automated broadcast servers will instantly reject your
           content.
@@ -52,18 +55,19 @@ const articlesData = [
         </p>
         <ul className="list-decimal pl-5 space-y-3 text-sm md:text-base text-text-gray font-light mb-8">
           <li>
-            <strong>Dialogue Isolation:</strong> Before mixing background scores
-            and VFX sounds, dialogue is isolated and locked precisely at -24
-            LUFS.
+            <strong className="text-white">Dialogue Isolation:</strong> Before
+            mixing background scores and VFX sounds, dialogue is isolated and
+            locked precisely at -24 LUFS.
           </li>
           <li>
-            <strong>Gating Protocol:</strong> To prevent silent sections from
-            providing false readings on the loudness meter, a gating radar is
-            implemented.
+            <strong className="text-white">Gating Protocol:</strong> To prevent
+            silent sections from providing false readings on the loudness meter,
+            a gating radar is implemented.
           </li>
           <li>
-            <strong>True Peak Limiting:</strong> The ceiling of the final master
-            limiter is permanently fixed at -2.0 dBTP.
+            <strong className="text-white">True Peak Limiting:</strong> The
+            ceiling of the final master limiter is permanently fixed at -2.0
+            dBTP.
           </li>
         </ul>
       </>
@@ -76,7 +80,7 @@ const articlesData = [
     date: "May 02, 2026",
     readTime: "8 Min Read",
     author: "H M Bakirul Islam",
-    bgGlow: "from-blue-500/5",
+    bgGlow: "from-blue-500/10",
     content: (
       <>
         <p className="text-base md:text-lg text-text-gray font-light leading-relaxed mb-6">
@@ -90,12 +94,13 @@ const articlesData = [
         </h3>
         <p className="text-sm md:text-base text-text-gray font-light leading-relaxed mb-6">
           For broadcast master files and cinematic archiving, our studio's
-          standard protocol requires <strong>Apple ProRes 422 HQ</strong> or{" "}
-          <strong>DNxHR HQX</strong> (10-bit color depth). This ensures 100%
-          preservation of visual information and grading data. However, for
-          theatrical distribution or OTT platform submissions, textless masters
-          and discrete multi-channel audio stems must be meticulously rendered
-          on separate tracks.
+          standard protocol requires{" "}
+          <strong className="text-white">Apple ProRes 422 HQ</strong> or{" "}
+          <strong className="text-white">DNxHR HQX</strong> (10-bit color
+          depth). This ensures 100% preservation of visual information and
+          grading data. However, for theatrical distribution or OTT platform
+          submissions, textless masters and discrete multi-channel audio stems
+          must be meticulously rendered on separate tracks.
         </p>
       </>
     ),
@@ -107,7 +112,7 @@ const articlesData = [
     date: "April 25, 2026",
     readTime: "12 Min Read",
     author: "Kachna Dev Core",
-    bgGlow: "from-purple-500/5",
+    bgGlow: "from-purple-500/10",
     content: (
       <>
         <p className="text-base md:text-lg text-text-gray font-light leading-relaxed mb-6">
@@ -129,13 +134,40 @@ const articlesData = [
       </>
     ),
   },
+  {
+    slug: "archival-restoration",
+    title: "Archival Restoration: Rescuing Legacy Footage",
+    category: "Restoration",
+    date: "April 18, 2026",
+    readTime: "5 Min Read",
+    author: "H M Bakirul Islam",
+    bgGlow: "from-green-500/10",
+    content: (
+      <>
+        <p className="text-base md:text-lg text-text-gray font-light leading-relaxed mb-6">
+          History is often trapped on degrading magnetic tape. Rescuing legacy
+          footage is not just a technical process—it is a preservation of our
+          visual heritage. Our studio specializes in the meticulous restoration
+          of aged media, bringing clarity to material that was once thought lost
+          to time.
+        </p>
+        <h3 className="text-2xl font-display text-white mt-10 mb-4">
+          Protocols for Preservation
+        </h3>
+        <p className="text-sm md:text-base text-text-gray font-light leading-relaxed mb-6">
+          The restoration workflow involves three critical stages:{" "}
+          <strong>digitization</strong>,<strong>noise reduction</strong>, and{" "}
+          <strong>AI-enhanced upscaling</strong>. By utilizing adaptive
+          filtering and frame-interpolation, we remove tape artifacts (like
+          scanlines and chroma noise) while preserving the original film grain
+          to maintain an authentic cinematic feel.
+        </p>
+      </>
+    ),
+  },
 ];
 
-export default function BlogArticlePage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default function BlogArticlePage({ params }) {
   const article = articlesData.find((a) => a.slug === params.slug);
 
   if (!article) {
@@ -146,7 +178,6 @@ export default function BlogArticlePage({
     <main className="min-h-screen flex flex-col bg-bg-body text-text-gray font-main overflow-x-hidden selection:bg-gold-primary selection:text-black">
       <Navbar />
 
-      {/* 1. ARTICLE HERO SECTION */}
       <header className="relative w-full max-w-4xl mx-auto px-6 pt-32 pb-12">
         <div
           className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[400px] bg-gradient-to-b ${article.bgGlow} to-transparent blur-[150px] -z-10 rounded-full pointer-events-none`}
@@ -155,9 +186,12 @@ export default function BlogArticlePage({
         <div className="mb-8">
           <Link
             href="/journal"
-            className="text-[10px] uppercase tracking-widest text-text-gray/60 hover:text-gold-primary transition-colors flex items-center gap-2"
+            className="text-[10px] uppercase tracking-widest text-text-gray/60 hover:text-gold-primary transition-colors flex items-center gap-2 w-max group"
           >
-            <span>←</span> Back to Journal
+            <span className="transform transition-transform duration-300 group-hover:-translate-x-1 animate-pulse group-hover:animate-none">
+              ←
+            </span>
+            Back to Journal
           </Link>
         </div>
 
@@ -176,7 +210,7 @@ export default function BlogArticlePage({
         </h1>
 
         <div className="flex items-center gap-3 border-b border-white/5 pb-8">
-          <div className="w-6 h-6 rounded-full bg-gold-primary/20 border border-gold-primary/40 flex items-center justify-center text-[10px] text-gold-primary font-bold">
+          <div className="w-8 h-8 rounded-full bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-[10px] text-gold-primary font-bold">
             K
           </div>
           <span className="text-xs uppercase tracking-wider text-text-white font-medium">
@@ -185,21 +219,18 @@ export default function BlogArticlePage({
         </div>
       </header>
 
-      {/* 2. MAIN ARTICLE BODY */}
       <section className="w-full max-w-3xl mx-auto px-6 pb-24 flex-grow">
-        <article className="prose prose-invert max-w-none">
+        <article className="prose prose-invert prose-p:font-light prose-headings:font-display max-w-none">
           {article.content}
         </article>
 
-        {/* Article Footer Info */}
         <div className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="text-xs text-text-gray/50">
-            Published officially by{" "}
-            <span className="text-white">Kachna Media Compliance HQ</span>.
+          <div className="text-xs text-text-gray/50 font-mono uppercase tracking-widest">
+            Compliance HQ © 2026
           </div>
           <Link
             href="/contact"
-            className="text-[10px] uppercase tracking-widest text-gold-primary border border-gold-primary/20 px-4 py-2 hover:bg-gold-primary hover:text-black transition-all font-bold"
+            className="text-[10px] uppercase tracking-widest text-gold-primary border border-gold-primary/20 px-6 py-3 hover:bg-gold-primary hover:text-black transition-all font-bold shadow-[0_0_10px_rgba(212,175,55,0.05)]"
           >
             Consult our Team
           </Link>

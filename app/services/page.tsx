@@ -3,34 +3,42 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 
 export default function ServicesPage() {
+  // Added 'href' paths for each service to make them clickable
   const services = [
     {
       title: "Broadcast Editing",
       desc: "Multi-camera synchronization, timeline architecture, and strict compliance for television.",
+      href: "/services/broadcast-editing",
     },
     {
       title: "Animation & Dub",
       desc: "Precise frame-by-frame dialogue syncing, character lip-matching, and international localization.",
+      href: "/services/animation-dub",
     },
     {
       title: "Audio Mastering",
       desc: "Broadcast-safe loudness tracking and strict LUFS-compliant mixing for all platforms.",
+      href: "/services/audio-mastering",
     },
     {
       title: "Color Grading",
       desc: "Advanced look development, skin-tone preservation, and Rec.709/HDR conversions.",
+      href: "/services/color-grading",
     },
     {
       title: "Motion & VFX",
       desc: "High-impact broadcast titles, dynamic lower-thirds, and clean plate design.",
+      href: "/services/motion-vfx",
     },
     {
       title: "Archival Restoration",
       desc: "Legacy footage digitizing, AI upscaling, tape denoise, and preservation workflows.",
+      href: "/services/archival-restoration",
     },
     {
       title: "Podcast Editing",
       desc: "Multi-microphone leveling, audio restoration, and premium cinematic podcast mastering.",
+      href: "/services/podcast-editing",
     },
   ];
 
@@ -40,7 +48,7 @@ export default function ServicesPage() {
 
       <header className="relative w-full max-w-7xl mx-auto px-6 pt-32 pb-20 flex flex-col items-center text-center">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[500px] bg-gold-primary blur-[200px] opacity-10 -z-10 rounded-full pointer-events-none"></div>
-        <span className="text-[11px] uppercase tracking-[0.3em] text-gold-primary block mb-6">
+        <span className="text-[11px] uppercase tracking-[0.3em] text-gold-primary block mb-6 animate-pulse">
           Our Capabilities
         </span>
         <h1 className="text-5xl md:text-7xl font-display leading-[1.1] max-w-[800px] mb-8 text-white">
@@ -58,17 +66,27 @@ export default function ServicesPage() {
       <section className="w-full max-w-7xl mx-auto px-6 pb-32 flex-grow">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {services.map((service, index) => (
-            <div
+            /* Changed from <div> to <Link> and added group class for hover effects */
+            <Link
               key={index}
-              className="bg-bg-panel p-10 border border-white/5 hover:border-gold-primary/50 transition-all duration-400"
+              href={service.href}
+              className="group flex flex-col bg-bg-panel p-10 border border-white/5 hover:border-gold-primary/50 transition-all duration-400 cursor-pointer"
             >
               <h3 className="text-2xl font-display text-white mb-4">
                 {service.title}
               </h3>
-              <p className="text-sm text-text-gray leading-relaxed">
+              <p className="text-sm text-text-gray leading-relaxed flex-grow mb-8">
                 {service.desc}
               </p>
-            </div>
+
+              {/* Added a call-to-action text that acts like a button */}
+              <div className="flex items-center text-[10px] text-gold-primary uppercase tracking-[0.2em] font-bold opacity-70 group-hover:opacity-100 transition-opacity duration-300">
+                Explore Service
+                <span className="ml-2 transform transition-transform duration-300 group-hover:translate-x-2">
+                  →
+                </span>
+              </div>
+            </Link>
           ))}
         </div>
       </section>

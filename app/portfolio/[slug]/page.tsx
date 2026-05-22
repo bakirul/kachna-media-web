@@ -3,55 +3,92 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-// Mock Data - (বাস্তবে এটি Supabase থেকে আসবে)
+// Real Data - Kachna Media Portfolio Projects
 const projectsDetail = [
   {
-    slug: "apex-summer-edge",
-    title: "Apex - The Summer Edge",
-    client: "Apex Footwear Ltd.",
-    role: "Color Grading & VFX",
-    duration: "4 Weeks",
+    slug: "heroic-archives",
+    title: "The Heroic Archives",
+    client: "Internal / YouTube Original",
+    role: "Lead Editor & Archival Mastering",
+    duration: "Ongoing Series",
     year: "2025",
     heroImage:
-      "https://images.unsplash.com/photo-1601506521937-0121a7fc2a6b?q=80&w=2071&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop",
     challenge:
-      "The client wanted a vibrant, high-contrast summer look that maintained natural skin tones while making the product colors pop aggressively on broadcast television.",
+      "Producing cinematic, long-form (2-hour+) historical documentaries required an intensive local AI workflow to restore archival footage and maintain consistent visual fidelity across lengthy timelines without overwhelming the rendering pipeline.",
     solution:
-      "We utilized a node-based ACES workflow in DaVinci Resolve, isolating specific color vectors for the products and applying a custom film emulation LUT to tie the cinematic summer vibe together seamlessly.",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ", // Placeholder
+      "Architected a custom ComfyUI production pipeline on a high-performance local RTX setup, integrating frame-by-frame upscaling and strict LUFS-compliant audio mastering for premium, broadcast-grade YouTube delivery.",
+    videoUrl: "", // Add actual YouTube embed link if available
   },
   {
-    slug: "unseen-horizons",
-    title: "Unseen Horizons",
-    client: "National Geographic TV",
-    role: "Offline Edit & Mastering",
-    duration: "3 Months",
+    slug: "voiced-classics",
+    title: "Voiced Classics",
+    client: "Internal / YouTube Original",
+    role: "AI Dubbing & Motion Graphics",
+    duration: "Ongoing Series",
     year: "2025",
     heroImage:
-      "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=2025&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1516280440502-a7f4579c8789?q=80&w=2070&auto=format&fit=crop",
     challenge:
-      "Over 50 hours of raw wildlife footage needed to be condensed into a gripping 45-minute narrative, maintaining strict pacing and compliance with broadcast loudness standards (-23 LUFS).",
+      "Bringing classic narratives to life demanded precise dialogue synchronization, character lip-matching, and generating custom cinematic branding assets that align with high-end audio-visual storytelling.",
     solution:
-      "Implemented a structured bin-organization protocol and paper edit. Handled rigorous audio mapping and delivered final masters in ProRes 422 HQ with discrete multichannel audio stems.",
+      "Deployed an advanced AI toolkit including Artistly.ai and CloneVoice.ai to generate pristine audio tracks and visuals. Seamlessly integrated these assets using strict timeline protocols for engaging viewer retention.",
   },
-  // অন্যান্য প্রজেক্টগুলো এখানে যোগ করা যাবে...
+  {
+    slug: "aurastream",
+    title: "AuraStream",
+    client: "Investor Demo",
+    role: "Project Architecture & UI Presentation",
+    duration: "Development Phase",
+    year: "2026",
+    heroImage:
+      "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1974&auto=format&fit=crop",
+    challenge:
+      "An upcoming movie streaming platform required a high-fidelity prototype and demo presentation to secure investor funding, demonstrating seamless video delivery architectures and intuitive content navigation.",
+    solution:
+      "Spearheaded the development phase utilizing modern deployment structures via Vercel and organized web project layouts under the Kachna Legacy team. Showcased the platform's potential with a visually stunning, user-centric demo.",
+  },
+  {
+    slug: "kachnafit",
+    title: "KachnaFit Platform",
+    client: "KachnaFit",
+    role: "Web & Revenue Integration",
+    duration: "Continuous",
+    year: "2025",
+    heroImage:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop",
+    challenge:
+      "Establishing a robust digital presence that seamlessly integrates monetization systems and content management without disrupting the premium user experience.",
+    solution:
+      "Integrated Google Reader Revenue Manager into a secure WordPress framework, utilizing Wordfence and robust infrastructure management across multiple domains for highly scalable business operations.",
+  },
+  {
+    slug: "pawprints-in-silence",
+    title: "PawPrints In Silence",
+    client: "Digital Property",
+    role: "Video Editing & Content Pipeline",
+    duration: "Continuous",
+    year: "2025",
+    heroImage:
+      "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=2069&auto=format&fit=crop",
+    challenge:
+      "Developing a consistent, high-quality video content pipeline for specialized dog training tutorials while seamlessly integrating affiliate marketing structures.",
+    solution:
+      "Created a streamlined video editing workflow for social and web delivery, paired with an optimized Amazon Associates integration to drive passive revenue while maintaining content authority.",
+  },
 ];
 
-export default function CaseStudyPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  // URL-এর slug অনুযায়ী নির্দিষ্ট প্রজেক্ট খুঁজে বের করা
+export default function CaseStudyPage({ params }) {
+  // URL-এর slug অনুযায়ী নির্দিষ্ট প্রজেক্ট খুঁজে বের করা
   const project = projectsDetail.find((p) => p.slug === params.slug);
 
-  // যদি প্রজেক্ট না পাওয়া যায়, তাহলে 404 Not Found পেজে পাঠিয়ে দেবে
+  // যদি প্রজেক্ট না পাওয়া যায়, তাহলে 404 Not Found পেজে পাঠিয়ে দেবে
   if (!project) {
     notFound();
   }
 
   return (
-    <main className="min-h-screen flex flex-col bg-bg-body text-text-white font-main overflow-x-hidden selection:bg-gold-primary selection:text-black">
+    <main className="min-h-screen flex flex-col bg-bg-body text-white font-main overflow-x-hidden selection:bg-gold-primary selection:text-black">
       <Navbar />
 
       {/* 1. HERO & METADATA SECTION */}
@@ -59,9 +96,12 @@ export default function CaseStudyPage({
         <div className="mb-10">
           <Link
             href="/portfolio"
-            className="text-[10px] uppercase tracking-widest text-text-gray hover:text-gold-primary transition-colors flex items-center gap-2"
+            className="text-[10px] uppercase tracking-widest text-text-gray hover:text-white transition-colors flex items-center gap-2 w-max group"
           >
-            <span>←</span> Back to Selected Works
+            <span className="text-gold-primary animate-pulse group-hover:animate-none">
+              ←
+            </span>
+            Back to Selected Works
           </Link>
         </div>
 

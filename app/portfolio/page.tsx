@@ -5,70 +5,71 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 
-// Mock Data for Portfolio Projects
+// Updated Data with your Actual Projects & Post-Production Disciplines
 const projects = [
   {
     id: 1,
-    title: "Apex - The Summer Edge",
-    category: "Commercial",
-    service: "Color Grading & VFX",
+    title: "The Heroic Archives",
+    category: "Documentary",
+    service: "Archival Restoration & Mastering",
     image:
-      "https://images.unsplash.com/photo-1601506521937-0121a7fc2a6b?q=80&w=2071&auto=format&fit=crop",
-    slug: "apex-summer-edge",
+      "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop",
+    slug: "heroic-archives",
   },
   {
     id: 2,
-    title: "Unseen Horizons",
-    category: "Documentary",
-    service: "Offline Edit & Mastering",
+    title: "Voiced Classics",
+    category: "Animation",
+    service: "AI Dubbing & Motion Graphics",
     image:
-      "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=2025&auto=format&fit=crop",
-    slug: "unseen-horizons",
+      "https://images.unsplash.com/photo-1516280440502-a7f4579c8789?q=80&w=2070&auto=format&fit=crop",
+    slug: "voiced-classics",
   },
   {
     id: 3,
-    title: "Channel X - News Intro",
-    category: "Broadcast",
-    service: "Motion Graphics",
+    title: "AuraStream",
+    category: "Technology",
+    service: "UI Architecture & Delivery",
     image:
-      "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?q=80&w=2056&auto=format&fit=crop",
-    slug: "channel-x-news",
+      "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1974&auto=format&fit=crop",
+    slug: "aurastream",
   },
   {
     id: 4,
-    title: "Urban Legends Vol. 2",
-    category: "Animation",
-    service: "Animation & Dubbing",
+    title: "Kachna Media Broadcast Reel",
+    category: "Broadcast",
+    service: "Full Post-Production",
     image:
-      "https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop",
-    slug: "urban-legends-2",
+      "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?q=80&w=2056&auto=format&fit=crop",
+    slug: "kachna-media-reel",
   },
   {
     id: 5,
-    title: "Midnight Drive",
+    title: "KachnaFit Platform",
     category: "Commercial",
-    service: "Full Post-Production",
+    service: "Web & Revenue Integration",
     image:
-      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=2183&auto=format&fit=crop",
-    slug: "midnight-drive",
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop",
+    slug: "kachnafit",
   },
   {
     id: 6,
-    title: "The Final Ascent",
-    category: "Documentary",
-    service: "Restoration & Color",
+    title: "PawPrints In Silence",
+    category: "Commercial",
+    service: "Video Editing & Content Management",
     image:
-      "https://images.unsplash.com/photo-1542204165-65bf26472b9b?q=80&w=1974&auto=format&fit=crop",
-    slug: "final-ascent",
+      "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=2069&auto=format&fit=crop",
+    slug: "pawprints-in-silence",
   },
 ];
 
 const categories = [
   "All",
-  "Commercial",
   "Documentary",
   "Broadcast",
   "Animation",
+  "Commercial",
+  "Technology",
 ];
 
 export default function PortfolioPage() {
@@ -89,7 +90,8 @@ export default function PortfolioPage() {
         {/* Background Glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gold-primary blur-[200px] opacity-10 -z-10 rounded-full pointer-events-none"></div>
 
-        <span className="text-[11px] uppercase tracking-[0.3em] text-gold-primary block mb-6">
+        {/* Pulse Animation Added Here */}
+        <span className="text-[11px] uppercase tracking-[0.3em] text-gold-primary block mb-6 animate-pulse">
           Selected Works
         </span>
         <h1 className="text-5xl md:text-7xl font-display leading-[1.1] max-w-[800px] mb-8 text-white">
@@ -131,9 +133,8 @@ export default function PortfolioPage() {
             <div key={project.id} className="group relative cursor-pointer">
               {/* Image Container with Cinematic Overlay */}
               <div className="relative w-full aspect-video overflow-hidden bg-bg-panel border border-white/5 mb-6">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-colors duration-500 z-10"></div>
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-colors duration-500 z-10 pointer-events-none"></div>
 
-                {/* Fallback pattern if image fails to load, but using unsplash for demo */}
                 <img
                   src={project.image}
                   alt={project.title}
@@ -189,7 +190,7 @@ export default function PortfolioPage() {
           </h2>
           <Link
             href="/contact"
-            className="inline-block bg-gold-primary text-black px-10 py-4 text-[0.8rem] font-bold uppercase tracking-[0.15em] hover:bg-white transition-all duration-400"
+            className="inline-block bg-transparent border border-gold-primary text-gold-primary px-10 py-4 text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-gold-primary hover:text-black transition-all duration-400 shadow-[0_0_15px_rgba(212,175,55,0.1)] hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]"
           >
             Request a Quote
           </Link>

@@ -9,7 +9,9 @@ export default function PricingPage() {
 
       <header className="relative w-full max-w-7xl mx-auto px-6 pt-32 pb-16 flex flex-col items-center text-center">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[500px] bg-gold-primary blur-[200px] opacity-10 -z-10 rounded-full pointer-events-none"></div>
-        <span className="text-[11px] uppercase tracking-[0.3em] text-gold-primary block mb-6">
+
+        {/* Pulse Animation Added Here */}
+        <span className="text-[11px] uppercase tracking-[0.3em] text-gold-primary block mb-6 animate-pulse">
           Investment
         </span>
         <h1 className="text-5xl md:text-7xl font-display leading-[1.1] max-w-[800px] mb-8 text-white">
@@ -25,10 +27,10 @@ export default function PricingPage() {
       </header>
 
       <section className="w-full max-w-7xl mx-auto px-6 pb-24 flex-grow">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
           {/* Tier 1: Day Rate */}
-          <div className="bg-bg-panel border border-white/5 p-10 hover:border-gold-primary/30 transition-colors flex flex-col">
-            <h3 className="text-xl font-display text-white mb-2">
+          <div className="bg-bg-panel border border-white/5 p-10 hover:border-gold-primary/30 hover:-translate-y-2 transition-all duration-500 flex flex-col h-full group">
+            <h3 className="text-xl font-display text-white mb-2 group-hover:text-gold-primary transition-colors">
               Editorial Day Rate
             </h3>
             <p className="text-sm text-text-gray mb-6">
@@ -59,17 +61,18 @@ export default function PricingPage() {
           </div>
 
           {/* Tier 2: Project Based (Highlighted) */}
-          <div className="bg-bg-panel border border-gold-primary p-10 relative flex flex-col transform lg:-translate-y-4 shadow-[0_0_30px_rgba(212,175,55,0.1)]">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-gold-primary text-black text-[9px] font-bold uppercase tracking-widest px-4 py-1">
+          <div className="bg-bg-panel border border-gold-primary p-10 relative flex flex-col transform lg:scale-105 shadow-[0_0_30px_rgba(212,175,55,0.15)] z-10 h-[105%] group">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-gold-primary text-black text-[9px] font-bold uppercase tracking-widest px-4 py-1 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span>
               Most Common
             </div>
-            <h3 className="text-xl font-display text-white mb-2 mt-4">
+            <h3 className="text-2xl font-display text-white mb-2 mt-4">
               Project-Based
             </h3>
             <p className="text-sm text-text-gray mb-6">
               End-to-end post-production for commercials & docs.
             </p>
-            <div className="text-3xl font-display text-gold-primary mb-8">
+            <div className="text-4xl font-display text-gold-primary mb-8">
               Flat Fee
             </div>
             <ul className="space-y-4 text-sm mb-10 flex-grow text-white">
@@ -92,15 +95,15 @@ export default function PricingPage() {
             </ul>
             <Link
               href="/contact"
-              className="block text-center bg-gold-primary text-black px-6 py-3 text-xs font-bold uppercase tracking-widest hover:bg-white transition-colors"
+              className="block text-center bg-gold-primary text-black px-6 py-4 text-xs font-bold uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)]"
             >
               Get an Estimate
             </Link>
           </div>
 
           {/* Tier 3: Retainer */}
-          <div className="bg-bg-panel border border-white/5 p-10 hover:border-gold-primary/30 transition-colors flex flex-col">
-            <h3 className="text-xl font-display text-white mb-2">
+          <div className="bg-bg-panel border border-white/5 p-10 hover:border-gold-primary/30 hover:-translate-y-2 transition-all duration-500 flex flex-col h-full group">
+            <h3 className="text-xl font-display text-white mb-2 group-hover:text-gold-primary transition-colors">
               Agency Retainer
             </h3>
             <p className="text-sm text-text-gray mb-6">
@@ -134,21 +137,21 @@ export default function PricingPage() {
 
         {/* Terms & Policies */}
         <div className="mt-20 border-t border-white/5 pt-12 grid grid-cols-1 md:grid-cols-2 gap-8 text-sm text-text-gray">
-          <div>
-            <h4 className="text-white font-display mb-2 text-lg">
-              Payment Terms
+          <div className="hover:bg-white/[0.02] p-6 transition-colors border border-transparent hover:border-white/5 rounded-sm">
+            <h4 className="text-white font-display mb-3 text-lg flex items-center gap-2">
+              <span className="text-gold-primary">▹</span> Payment Terms
             </h4>
-            <p className="leading-relaxed">
+            <p className="leading-relaxed pl-5">
               A standard 50% advance is required to initiate any project and
               lock studio time. The remaining 50% is due upon final approval,
               prior to the release of high-resolution, watermark-free masters.
             </p>
           </div>
-          <div>
-            <h4 className="text-white font-display mb-2 text-lg">
-              Revision Policy
+          <div className="hover:bg-white/[0.02] p-6 transition-colors border border-transparent hover:border-white/5 rounded-sm">
+            <h4 className="text-white font-display mb-3 text-lg flex items-center gap-2">
+              <span className="text-gold-primary">▹</span> Revision Policy
             </h4>
-            <p className="leading-relaxed">
+            <p className="leading-relaxed pl-5">
               All project-based quotes include two (2) rounds of consolidated
               revisions. Additional revisions beyond the agreed scope are billed
               at our standard hourly editorial rate.

@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 
-// Mock Data: Blog Posts (From your HTML files)
+// Mock Data: Blog Posts
 const articles = [
   {
     id: 1,
@@ -73,7 +73,8 @@ export default function JournalPage() {
       <header className="relative w-full max-w-7xl mx-auto px-6 pt-32 pb-16 flex flex-col items-center text-center">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[500px] bg-gold-primary blur-[200px] opacity-10 -z-10 rounded-full pointer-events-none"></div>
 
-        <span className="text-[11px] uppercase tracking-[0.3em] text-gold-primary block mb-6">
+        {/* Pulse Animation Added Here */}
+        <span className="text-[11px] uppercase tracking-[0.3em] text-gold-primary block mb-6 animate-pulse">
           Knowledge Hub
         </span>
         <h1 className="text-5xl md:text-7xl font-display leading-[1.1] max-w-[800px] mb-8 text-white">
@@ -108,7 +109,7 @@ export default function JournalPage() {
 
           <Link
             href="/podcast"
-            className="relative z-10 shrink-0 bg-transparent text-gold-primary px-8 py-4 text-xs font-bold uppercase tracking-[0.15em] border border-gold-primary hover:bg-gold-primary hover:text-black transition-all flex items-center gap-3"
+            className="relative z-10 shrink-0 bg-transparent text-gold-primary px-8 py-4 text-xs font-bold uppercase tracking-[0.15em] border border-gold-primary hover:bg-gold-primary hover:text-black transition-all flex items-center gap-3 shadow-[0_0_15px_rgba(212,175,55,0.1)] hover:shadow-[0_0_30px_rgba(212,175,55,0.3)]"
           >
             <span>▶</span> Listen to Episodes
           </Link>
@@ -140,7 +141,7 @@ export default function JournalPage() {
           {filteredArticles.map((article) => (
             <article
               key={article.id}
-              className="group cursor-pointer flex flex-col"
+              className="group cursor-pointer flex flex-col border border-white/5 p-8 bg-bg-panel hover:border-gold-primary/30 transition-all duration-500"
             >
               <Link href={`/journal/${article.slug}`}>
                 <div className="flex items-center gap-4 mb-4">
@@ -166,7 +167,7 @@ export default function JournalPage() {
                   </span>
                   <span className="text-xs uppercase tracking-widest text-white group-hover:text-gold-primary transition-colors flex items-center gap-2">
                     Read Article{" "}
-                    <span className="group-hover:translate-x-1 transition-transform">
+                    <span className="group-hover:translate-x-1 transition-transform duration-300">
                       →
                     </span>
                   </span>

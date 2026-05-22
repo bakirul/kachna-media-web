@@ -9,7 +9,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  // SEO আর্কিটেকচার অনুযায়ী লিংক ম্যাপিং
+  // Navigation links mapped for SEO architecture
   const navLinks = [
     { name: "About", path: "/studio" },
     { name: "Work", path: "/portfolio" },
@@ -85,16 +85,16 @@ export default function Navbar() {
             );
           })}
 
-          {/* 4. Legacy Protocol (Client Access Vault) */}
-          <Link
-            href="/access"
+          {/* 4. Legacy Protocol (External Sub-domain Vault) */}
+          <a
+            href="https://app.kachnamedia.com"
             className="group ml-0 md:ml-6 mt-4 md:mt-0 px-5 py-2.5 border border-gold-primary/40 bg-gold-primary/5 text-gold-primary text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-2.5 transition-all duration-500 hover:bg-gold-primary hover:text-black hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] shadow-[0_0_15px_rgba(212,175,55,0.05)]"
             onClick={() => setIsOpen(false)}
           >
             {/* Tailwind's built-in pulse animation */}
             <span className="w-1.5 h-1.5 bg-gold-primary rounded-full animate-pulse group-hover:bg-black group-hover:animate-none"></span>
             Legacy Protocol
-          </Link>
+          </a>
         </div>
       </nav>
     </div>
