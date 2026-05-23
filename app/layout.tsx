@@ -22,11 +22,14 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 // 2. Global SEO & Metadata Configuration
-export const metadata = {
+export const metadata: Metadata = {
   title: "Kachna Media | Broadcast Post-Production Studio",
   description:
     "A premium broadcast post-production studio based in Dhaka, Bangladesh.",
   metadataBase: new URL("https://kachnamedia.com"),
+  verification: {
+    google: "uW6t6pYp1f9lFbxO92cq6s47acjHD8Zsor39tU-7hWU", // Google Site Verification Code
+  },
 };
 
 export default function RootLayout({
