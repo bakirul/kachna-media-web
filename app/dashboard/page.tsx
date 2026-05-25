@@ -32,6 +32,18 @@ export default function DashboardPage() {
   const [newComment, setNewComment] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // --- NEW: Audio/Visual Frame Marking States (Updated 4 Types) ---
+  const [commentType, setCommentType] = useState<
+    "video" | "color" | "motion" | "audio"
+  >("video");
+  const [selectedX, setSelectedX] = useState<number | null>(null);
+  const [selectedY, setSelectedY] = useState<number | null>(null);
+  const [activeMarker, setActiveMarker] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  // ----------------------------------------------
+
   const [briefModalOpen, setBriefModalOpen] = useState(false);
   const [hasBrief, setHasBrief] = useState(false);
   const [briefData, setBriefData] = useState({
@@ -43,9 +55,7 @@ export default function DashboardPage() {
     instructions: "",
   });
 
-  // --- NEW: Client Invoice State ---
   const [invoices, setInvoices] = useState<any[]>([]);
-  // ---------------------------------
 
   const statusSteps = [
     { name: "Awaiting Assets", desc: "Waiting for client upload" },
@@ -110,7 +120,6 @@ export default function DashboardPage() {
     [supabase],
   );
 
-  // --- NEW: Fetch Invoices Logic ---
   const fetchInvoices = useCallback(
     async (userId: string) => {
       const { data } = await supabase
@@ -122,7 +131,6 @@ export default function DashboardPage() {
     },
     [supabase],
   );
-  // ---------------------------------
 
   useEffect(() => {
     const checkUserAndFetchData = async () => {
@@ -137,7 +145,7 @@ export default function DashboardPage() {
       await fetchFiles(session.user.id, currentFolder);
       await fetchProjectStatus(session.user.id);
       await fetchBrief(session.user.id);
-      await fetchInvoices(session.user.id); // Fetch Invoices on load
+      await fetchInvoices(session.user.id);
       setLoading(false);
     };
 
@@ -145,7 +153,7 @@ export default function DashboardPage() {
     const interval = setInterval(async () => {
       if (user?.id) {
         await fetchProjectStatus(user.id);
-        await fetchInvoices(user.id); // Real-time Invoice Status Update
+        await fetchInvoices(user.id);
       }
     }, 15000);
     return () => clearInterval(interval);
@@ -164,16 +172,14 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!user) return;
     setActionLoading("brief_submit");
-    const { error } = await supabase
-      .from("project_status_details")
-      .upsert(
-        {
-          user_id: user.id,
-          ...briefData,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" },
-      );
+    const { error } = await supabase.from("project_status_details").upsert(
+      {
+        user_id: user.id,
+        ...briefData,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
     if (!error) {
       setHasBrief(true);
       setMessage({
@@ -183,16 +189,14 @@ export default function DashboardPage() {
       setBriefModalOpen(false);
       setTimeout(() => setMessage(null), 4000);
       if (projectStatus === "Awaiting Assets") {
-        await supabase
-          .from("project_status")
-          .upsert(
-            {
-              user_id: user.id,
-              status: "Ingesting",
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "user_id" },
-          );
+        await supabase.from("project_status").upsert(
+          {
+            user_id: user.id,
+            status: "Ingesting",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" },
+        );
         setProjectStatus("Ingesting");
       }
     }
@@ -215,6 +219,7 @@ export default function DashboardPage() {
     }
     setActionLoading(null);
   };
+
   const navigateToFolder = (folderName: string) =>
     setCurrentFolder((prev) => (prev ? `${prev}/${folderName}` : folderName));
   const navigateUp = () => {
@@ -251,6 +256,7 @@ export default function DashboardPage() {
     currentFolder
       ? `${user.id}/${currentFolder}/${fileName}`
       : `${user.id}/${fileName}`;
+
   const handleDeleteFile = async (fileName: string) => {
     if (!confirm("Delete asset?")) return;
     const { error } = await supabase.storage
@@ -258,16 +264,19 @@ export default function DashboardPage() {
       .remove([getFilePath(fileName)]);
     if (!error) fetchFiles(user.id, currentFolder);
   };
+
   const getSignedUrl = async (fileName: string) => {
     const { data } = await supabase.storage
       .from("client-vault")
       .createSignedUrl(getFilePath(fileName), 604800);
     return data?.signedUrl;
   };
+
   const handleDownload = async (fileName: string) => {
     const url = await getSignedUrl(fileName);
     if (url) window.open(url, "_blank");
   };
+
   const handleShare = async (fileName: string) => {
     const url = await getSignedUrl(fileName);
     if (url) {
@@ -286,11 +295,16 @@ export default function DashboardPage() {
       .padStart(2, "0");
     return `${m}:${s}`;
   };
+
   const handlePreview = async (fileName: string) => {
     const url = await getSignedUrl(fileName);
     if (url) {
       const isVideo = fileName.match(/\.(mp4|webm|ogg|mov)$/i) !== null;
       setPreviewFile({ name: fileName, url, isVideo });
+      setActiveMarker(null);
+      setSelectedX(null);
+      setSelectedY(null);
+      setCommentType("video");
       if (isVideo) {
         const { data } = await supabase
           .from("video_comments")
@@ -301,12 +315,32 @@ export default function DashboardPage() {
       }
     }
   };
+
+  const handleVideoClick = (e: React.MouseEvent<HTMLVideoElement>) => {
+    if (!videoRef.current) return;
+    const rect = videoRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    setSelectedX(parseFloat(x.toFixed(2)));
+    setSelectedY(parseFloat(y.toFixed(2)));
+    setActiveMarker({ x, y });
+
+    // If audio is selected and they click the video, default back to 'video' for visual feedback
+    if (commentType === "audio") {
+      setCommentType("video");
+    }
+  };
+
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !previewFile || !videoRef.current || !user)
       return;
     const currentTime = videoRef.current.currentTime;
     videoRef.current.pause();
+
+    const isVisual = commentType !== "audio";
+
     const { data, error } = await supabase
       .from("video_comments")
       .insert([
@@ -315,20 +349,47 @@ export default function DashboardPage() {
           user_id: user.id,
           time_stamp: currentTime,
           comment_text: newComment.trim(),
+          comment_type: commentType,
+          pos_x: isVisual ? selectedX : null,
+          pos_y: isVisual ? selectedY : null,
         },
       ])
       .select();
+
     if (!error && data) {
       setComments((prev) =>
         [...prev, data[0]].sort((a, b) => a.time_stamp - b.time_stamp),
       );
       setNewComment("");
+      setSelectedX(null);
+      setSelectedY(null);
+      setActiveMarker(null);
     }
   };
-  const jumpToTime = (time: number) => {
+
+  const jumpToTime = (
+    time: number,
+    posX?: number,
+    posY?: number,
+    type?: string,
+  ) => {
     if (videoRef.current) {
       videoRef.current.currentTime = time;
       videoRef.current.play();
+    }
+    if (
+      posX !== undefined &&
+      posY !== undefined &&
+      posX !== null &&
+      posY !== null
+    ) {
+      setActiveMarker({ x: posX, y: posY });
+      // Restore the type for visual context
+      if (type === "video" || type === "color" || type === "motion") {
+        setCommentType(type as "video" | "color" | "motion");
+      }
+    } else {
+      setActiveMarker(null);
     }
   };
 
@@ -344,7 +405,6 @@ export default function DashboardPage() {
       handleUpload(e.dataTransfer.files);
   };
 
-  // --- NEW: Print Invoice Function ---
   const handlePrintInvoice = (inv: any) => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -357,7 +417,7 @@ export default function DashboardPage() {
             .header { border-b: 2px solid #d4af37; padding-bottom: 20px; margin-bottom: 30px; }
             .title { font-size: 28px; font-weight: bold; color: #111; }
             .meta { margin-top: 20px; line-height: 1.6; }
-            .table { w: 100%; border-collapse: collapse; margin-top: 30px; }
+            .table { width: 100%; border-collapse: collapse; margin-top: 30px; }
             .table th, .table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
             .table th { background-color: #f5f5f5; }
             .total { font-size: 18px; font-weight: bold; margin-top: 30px; text-align: right; }
@@ -389,7 +449,6 @@ export default function DashboardPage() {
     `);
     printWindow.document.close();
   };
-  // ------------------------------------
 
   if (loading)
     return (
@@ -411,7 +470,6 @@ export default function DashboardPage() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gold-primary blur-[200px] opacity-5 -z-10 pointer-events-none"></div>
 
       <div className="w-full max-w-6xl mt-10">
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gold-line pb-6 mb-8 gap-4">
           <div>
             <span className="text-[10px] text-gold-primary uppercase tracking-[0.2em] mb-2 block">
@@ -435,7 +493,6 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Status Tracker */}
         <div className="bg-bg-panel border border-white/5 p-6 mb-8 relative overflow-hidden">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
@@ -485,7 +542,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* --- NEW: Client Billing Dashboard Section --- */}
         {invoices.length > 0 && (
           <div className="bg-bg-panel border border-white/5 p-6 mb-8">
             <h2 className="text-sm uppercase tracking-widest text-gold-primary mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
@@ -529,10 +585,8 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
-        {/* --------------------------------------------- */}
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Transfer Area */}
           <div className="lg:col-span-2 flex flex-col">
             <h2 className="text-xl font-display text-text-white mb-4">
               Transfer Assets
@@ -587,7 +641,6 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Vault History */}
           <div className="lg:col-span-3 bg-bg-panel border border-white/5 p-6 flex flex-col h-[500px]">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b border-white/5 pb-4 gap-4">
               <div className="flex items-center gap-3">
@@ -735,7 +788,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Project Brief Modal */}
       {briefModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
           <div className="w-full max-w-2xl bg-bg-panel border border-gold-primary/30 shadow-2xl relative">
@@ -861,12 +913,12 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Video Player Modal */}
+      {/* Video Player Modal with Advanced Frame Marking & Filtering */}
       {previewFile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm p-4">
           <button
             onClick={() => setPreviewFile(null)}
-            className="absolute top-6 right-6 text-text-gray hover:text-white"
+            className="absolute top-6 right-6 text-text-gray hover:text-white transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -881,15 +933,28 @@ export default function DashboardPage() {
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
+
           <div className="w-full max-w-7xl h-[85vh] flex flex-col lg:flex-row border border-white/10 bg-bg-panel overflow-hidden">
-            <div className="flex-grow bg-black flex flex-col justify-center relative">
+            <div className="flex-grow bg-black flex flex-col justify-center relative group select-none">
               {previewFile.isVideo ? (
-                <video
-                  ref={videoRef}
-                  src={previewFile.url}
-                  controls
-                  className="w-full max-h-full outline-none"
-                />
+                <div className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden">
+                  <video
+                    ref={videoRef}
+                    src={previewFile.url}
+                    controls
+                    onClick={handleVideoClick}
+                    className="w-full max-h-[80vh] outline-none object-contain cursor-crosshair relative z-10"
+                  />
+                  {activeMarker && (
+                    <div
+                      className="absolute w-4 h-4 bg-gold-primary border-2 border-white rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 shadow-[0_0_15px_rgba(212,175,55,1)] animate-pulse"
+                      style={{
+                        left: `${activeMarker.x}%`,
+                        top: `${activeMarker.y}%`,
+                      }}
+                    />
+                  )}
+                </div>
               ) : (
                 <img
                   src={previewFile.url}
@@ -898,46 +963,143 @@ export default function DashboardPage() {
                 />
               )}
             </div>
+
             {previewFile.isVideo && (
-              <div className="w-full lg:w-[400px] flex flex-col bg-bg-body h-full">
-                <div className="p-6 border-b border-white/5">
-                  <h3 className="text-gold-primary uppercase tracking-widest text-sm">
-                    Feedback & Revision
+              <div className="w-full lg:w-[400px] flex flex-col bg-bg-body h-full border-l border-white/5">
+                <div className="p-6 border-b border-white/5 bg-bg-panel flex justify-between items-center">
+                  <h3 className="text-gold-primary uppercase tracking-widest text-xs font-bold font-mono">
+                    Broadcast QC Review
                   </h3>
+                  {selectedX && selectedY && (
+                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5">
+                      Frame Marked
+                    </span>
+                  )}
                 </div>
-                <div className="flex-grow overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                  {comments.map((c) => (
-                    <div
-                      key={c.id}
-                      className="border border-white/5 p-3 bg-bg-panel"
-                    >
-                      <button
-                        onClick={() => jumpToTime(c.time_stamp)}
-                        className="bg-gold-primary/10 text-gold-primary px-2 py-0.5 text-[10px] font-mono"
+
+                <div className="flex-grow overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                  {comments.map((c) => {
+                    const isVisualComment = c.comment_type !== "audio";
+
+                    let badgeColor = "";
+                    let badgeLabel = "";
+
+                    switch (c.comment_type) {
+                      case "video":
+                        badgeColor = "text-indigo-400 bg-indigo-500/10";
+                        badgeLabel = "✂️ Edit";
+                        break;
+                      case "color":
+                        badgeColor = "text-purple-400 bg-purple-500/10";
+                        badgeLabel = "🎨 Color";
+                        break;
+                      case "motion":
+                        badgeColor = "text-amber-400 bg-amber-500/10";
+                        badgeLabel = "🎬 VFX";
+                        break;
+                      case "audio":
+                        badgeColor = "text-cyan-400 bg-cyan-500/10";
+                        badgeLabel = "🎵 Mix";
+                        break;
+                      default:
+                        badgeColor = "text-gray-400 bg-gray-500/10";
+                        badgeLabel = "📝 Note";
+                    }
+
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() =>
+                          jumpToTime(
+                            c.time_stamp,
+                            c.pos_x,
+                            c.pos_y,
+                            c.comment_type,
+                          )
+                        }
+                        className={`border p-3 transition-all cursor-pointer hover:bg-white/[0.02] group relative ${isVisualComment ? "border-gold-primary/20 bg-gold-primary/[0.01]" : "border-white/5 bg-bg-panel"}`}
                       >
-                        {formatTime(c.time_stamp)}
-                      </button>
-                      <p className="text-sm text-text-white mt-1">
-                        {c.comment_text}
-                      </p>
-                    </div>
-                  ))}
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="bg-white/5 group-hover:bg-gold-primary group-hover:text-black text-gold-primary px-2 py-0.5 text-[10px] font-mono font-bold transition-all">
+                            {formatTime(c.time_stamp)}
+                          </span>
+                          <span
+                            className={`text-[9px] uppercase tracking-wider px-2 py-0.5 font-bold font-mono ${badgeColor}`}
+                          >
+                            {badgeLabel}
+                          </span>
+                        </div>
+                        <p className="text-sm text-text-white font-sans leading-relaxed">
+                          {c.comment_text}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
+
                 <form
                   onSubmit={handleAddComment}
-                  className="p-4 border-t border-white/5 bg-bg-panel"
+                  className="p-4 border-t border-white/5 bg-bg-panel space-y-3"
                 >
+                  {/* Category Filter Toggle Button Group (4 Columns) */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-1 p-1 bg-black border border-white/10 rounded">
+                    <button
+                      type="button"
+                      onClick={() => setCommentType("video")}
+                      className={`py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all rounded-sm ${commentType === "video" ? "bg-indigo-500 text-white" : "text-text-gray hover:text-white"}`}
+                    >
+                      ✂️ Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommentType("color")}
+                      className={`py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all rounded-sm ${commentType === "color" ? "bg-purple-500 text-white" : "text-text-gray hover:text-white"}`}
+                    >
+                      🎨 Color
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommentType("motion")}
+                      className={`py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all rounded-sm ${commentType === "motion" ? "bg-amber-500 text-black" : "text-text-gray hover:text-white"}`}
+                    >
+                      🎬 VFX
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCommentType("audio");
+                        setSelectedX(null);
+                        setSelectedY(null);
+                        setActiveMarker(null);
+                      }}
+                      className={`py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all rounded-sm ${commentType === "audio" ? "bg-cyan-500 text-black" : "text-text-gray hover:text-white"}`}
+                    >
+                      🎵 Mix
+                    </button>
+                  </div>
+
+                  {commentType !== "audio" && !activeMarker && (
+                    <p className="text-[10px] text-text-gray italic text-center">
+                      💡 Tip: Click anywhere directly on the video screen to
+                      pinpoint a visual correction.
+                    </p>
+                  )}
+
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add comment..."
-                      className="flex-grow bg-bg-body border border-white/10 px-3 py-2 text-white outline-none"
+                      placeholder={
+                        commentType === "audio"
+                          ? "Describe audio mix adjustment..."
+                          : "Describe visual correction..."
+                      }
+                      className="flex-grow bg-bg-body border border-white/10 px-3 py-2 text-white outline-none focus:border-gold-primary text-sm transition-colors"
                     />
                     <button
                       type="submit"
-                      className="bg-gold-primary text-black px-4 text-xs font-bold uppercase"
+                      className="bg-gold-primary hover:bg-white text-black px-4 text-xs font-bold uppercase tracking-wider transition-colors"
                     >
                       Post
                     </button>

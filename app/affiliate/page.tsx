@@ -6,16 +6,16 @@ import Footer from "@/components/Footer";
 
 export default function AffiliatePage() {
   const [formData, setFormData] = useState({
-    partnerName: "",
-    partnerEmail: "",
-    clientName: "",
-    projectBrief: "",
+    fullName: "",
+    email: "",
+    linkedinUrl: "",
+    networkSummary: "",
   });
   const [formSubmitted, setFormSubmitted] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // পরবর্তীতে এখানে Supabase বা Email API যুক্ত করা যাবে
+    // Logic for sending application to HQ/Supabase/Email API
     setFormSubmitted(true);
   };
 
@@ -28,11 +28,11 @@ export default function AffiliatePage() {
       <div className="w-full max-w-7xl mx-auto px-6 py-8 flex justify-between items-center relative z-10">
         <Link href="/" className="flex items-center gap-2 group">
           <span className="text-text-gray group-hover:text-gold-primary transition-colors text-xs uppercase tracking-widest">
-            ← Back to Home
+            ← Back to HQ
           </span>
         </Link>
         <span className="text-[10px] uppercase tracking-widest text-gold-primary border border-gold-primary/20 px-3 py-1 font-mono">
-          B2B Network
+          Strictly B2B Network
         </span>
       </div>
 
@@ -42,22 +42,22 @@ export default function AffiliatePage() {
         <div className="space-y-8">
           <div>
             <span className="text-gold-primary text-xs font-bold uppercase tracking-[0.3em] mb-3 block">
-              Agency Partner Program
+              Exclusive Partner Network
             </span>
             <h1 className="text-4xl md:text-5xl font-display leading-tight text-white">
-              Bring in Work.
+              Apply for Access.
               <br />
-              Earn Competitive Rewards.
+              Earn Premium Rev-Share.
             </h1>
             <p className="text-text-gray text-sm mt-4 leading-relaxed">
-              Kachna Media-এর পার্টনার নেটওয়ার্কে আপনাকে স্বাগতম। আপনি যদি কোনো
-              ব্র্যান্ড, ক্রিয়েটর বা এজেন্সির ভিডিও প্রোডাকশন বা পোস্ট-প্রোডাকশন
-              প্রজেক্ট আমাদের সাথে কানেক্ট করে দিতে পারেন, তবে প্রতিটি সফল ডিল
-              থেকে আপনি একটি সলিড রেভিনিউ শেয়ার পাবেন।
+              The Kachna Media Partner Network is an invite-only program
+              reserved for top-tier agency owners, independent producers, and
+              elite B2B connectors. We hold our broadcast standards high, and
+              our vetting process for partners reflects that exact commitment.
             </p>
           </div>
 
-          {/* Program Pillars */}
+          {/* Program Pillars & Criteria */}
           <div className="space-y-4 border-t border-white/5 pt-6">
             <div className="flex gap-4">
               <div className="text-gold-primary font-mono text-sm shrink-0">
@@ -65,11 +65,13 @@ export default function AffiliatePage() {
               </div>
               <div>
                 <h4 className="text-white text-sm uppercase tracking-wider font-semibold">
-                  10% - 15% Commission Structure
+                  Authority Approval Required
                 </h4>
                 <p className="text-text-gray text-xs mt-1 leading-relaxed">
-                  প্রতিটি প্রজেক্টের মোট বাজেট ক্লিয়ার হওয়ার পর সেটির ১০% থেকে
-                  ১৫% সরাসরি আপনার পার্টনার অ্যাকাউন্টে ট্রান্সফার করা হবে।
+                  Access is not guaranteed. Every application is manually
+                  reviewed by our HQ. You must demonstrate a proven track record
+                  and an established network within the media, corporate, or
+                  broadcast sectors.
                 </p>
               </div>
             </div>
@@ -80,11 +82,13 @@ export default function AffiliatePage() {
               </div>
               <div>
                 <h4 className="text-white text-sm uppercase tracking-wider font-semibold">
-                  Zero Financial Risk (Milestone Locked)
+                  10% - 15% High-Ticket Commissions
                 </h4>
                 <p className="text-text-gray text-xs mt-1 leading-relaxed">
-                  ক্লায়েন্ট যখন ইনভয়েস পরিশোধ করবে, আপনার কমিশন তখনই লক হয়ে
-                  যাবে। কোনো জটিল হিডেন পলিসি বা ফাইন্যান্সিয়াল রিস্ক নেই।
+                  Once authorized, you earn a flat 10-15% commission on closed
+                  deals. With our high-ticket cinematic and broadcast
+                  post-production services, a single conversion yields
+                  substantial returns.
                 </p>
               </div>
             </div>
@@ -95,112 +99,113 @@ export default function AffiliatePage() {
               </div>
               <div>
                 <h4 className="text-white text-sm uppercase tracking-wider font-semibold">
-                  Full Technical Ownership by HQ
+                  Zero Delivery Liability
                 </h4>
                 <p className="text-text-gray text-xs mt-1 leading-relaxed">
-                  আপনার কাজ শুধু লিড বা ক্লায়েন্টকে ইন্ট্রোডিউস করিয়ে দেওয়া।
-                  কোয়ালিটি কন্ট্রোল, ক্লায়েন্ট ভল্ট ম্যানেজমেন্ট এবং প্রোডাকশনের
-                  পুরো দায়িত্ব আমাদের ব্রডকাস্ট টিমের।
+                  Your sole focus is bridging the connection. Our specialized
+                  post-production roster handles all technical execution,
+                  quality control, and final broadcast delivery.
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Side: Lead Submission Form */}
+        {/* Right Side: Application Form */}
         <div className="bg-bg-panel border border-white/5 p-8 relative">
           <h3 className="text-base uppercase tracking-widest text-gold-primary mb-6 border-b border-white/10 pb-3">
-            Submit Deal / Reference
+            Request Authorization
           </h3>
 
           {formSubmitted ? (
             <div className="py-12 text-center space-y-4">
-              <div className="w-12 h-12 bg-gold-primary/10 text-gold-primary rounded-full flex items-center justify-center mx-auto text-xl">
+              <div className="w-12 h-12 bg-gold-primary/10 text-gold-primary border border-gold-primary/30 rounded-full flex items-center justify-center mx-auto text-xl shadow-[0_0_15px_rgba(212,175,55,0.2)]">
                 ✓
               </div>
-              <h4 className="text-white text-lg font-display">
-                Lead Transmitted successfully!
+              <h4 className="text-white text-lg font-display uppercase tracking-widest mt-4">
+                Application Under Review
               </h4>
-              <p className="text-text-gray text-xs max-w-sm mx-auto leading-relaxed">
-                আমাদের টিম আপনার সাবমিট করা লিডটি পর্যালোচনা করে খুব দ্রুত আপনার
-                ইমেইলে যোগাযোগ করবে। ধন্যবাদ!
+              <p className="text-text-gray text-xs max-w-sm mx-auto leading-relaxed mt-2">
+                Your credentials have been securely transmitted to our vetting
+                team. If your profile aligns with our operational standards, you
+                will receive your authorization access via email within 48-72
+                hours.
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 text-sm">
               <div>
                 <label className="block text-[10px] uppercase tracking-widest text-text-gray mb-2">
-                  Your Full Name
+                  Legal Full Name
                 </label>
                 <input
                   required
                   type="text"
-                  value={formData.partnerName}
+                  value={formData.fullName}
                   onChange={(e) =>
-                    setFormData({ ...formData, partnerName: e.target.value })
+                    setFormData({ ...formData, fullName: e.target.value })
                   }
-                  placeholder="e.g. Robin Ahmed"
-                  className="w-full bg-black border border-white/10 p-3 text-white focus:border-gold-primary outline-none"
+                  placeholder="John Doe"
+                  className="w-full bg-black border border-white/10 p-3 text-white focus:border-gold-primary outline-none transition-colors"
                 />
               </div>
               <div>
                 <label className="block text-[10px] uppercase tracking-widest text-text-gray mb-2">
-                  Your Email Address
+                  Business Email Address
                 </label>
                 <input
                   required
                   type="email"
-                  value={formData.partnerEmail}
+                  value={formData.email}
                   onChange={(e) =>
-                    setFormData({ ...formData, partnerEmail: e.target.value })
+                    setFormData({ ...formData, email: e.target.value })
                   }
-                  placeholder="robin@example.com"
-                  className="w-full bg-black border border-white/10 p-3 text-white focus:border-gold-primary outline-none"
+                  placeholder="john@agency.com"
+                  className="w-full bg-black border border-white/10 p-3 text-white focus:border-gold-primary outline-none transition-colors"
                 />
               </div>
               <div className="border-t border-white/10 my-4 pt-4">
-                <label className="block text-[10px] uppercase tracking-widest text-gold-primary mb-2">
-                  Potential Client Name / Company
+                <label className="block text-[10px] uppercase tracking-widest text-text-gray mb-2">
+                  LinkedIn Profile / Agency URL (For Vetting)
                 </label>
                 <input
                   required
-                  type="text"
-                  value={formData.clientName}
+                  type="url"
+                  value={formData.linkedinUrl}
                   onChange={(e) =>
-                    setFormData({ ...formData, clientName: e.target.value })
+                    setFormData({ ...formData, linkedinUrl: e.target.value })
                   }
-                  placeholder="e.g. Apex Ltd. or Channel X"
-                  className="w-full bg-black border border-white/10 p-3 text-white focus:border-gold-primary outline-none"
+                  placeholder="https://linkedin.com/in/yourprofile"
+                  className="w-full bg-black border border-white/10 p-3 text-white focus:border-gold-primary outline-none transition-colors"
                 />
               </div>
               <div>
                 <label className="block text-[10px] uppercase tracking-widest text-text-gray mb-2">
-                  Project Brief / Expected Work
+                  Network Summary & Acquisition Strategy
                 </label>
                 <textarea
                   required
                   rows={4}
-                  value={formData.projectBrief}
+                  value={formData.networkSummary}
                   onChange={(e) =>
-                    setFormData({ ...formData, projectBrief: e.target.value })
+                    setFormData({ ...formData, networkSummary: e.target.value })
                   }
-                  placeholder="পটেনশিয়াল কাজের একটি ছোট বিবরণ দিন (যেমন: কমার্শিয়াল কালার গ্রেডিং বা ২ ঘণ্টার ডকুমেন্টারি এডিট)..."
-                  className="w-full bg-black border border-white/10 p-3 text-white focus:border-gold-primary outline-none custom-scrollbar"
+                  placeholder="Briefly describe your current client base and how you plan to refer high-ticket post-production leads..."
+                  className="w-full bg-black border border-white/10 p-3 text-white focus:border-gold-primary outline-none custom-scrollbar transition-colors"
                 ></textarea>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-gold-primary text-black font-bold uppercase tracking-widest py-4 mt-2 hover:bg-white transition-colors"
+                className="w-full bg-gold-primary text-black font-bold text-xs uppercase tracking-[0.2em] py-4 mt-4 hover:bg-white transition-all duration-300"
               >
-                Register Lead
+                Submit For Authorization
               </button>
             </form>
           )}
         </div>
       </div>
 
-      {/* Global Footer Component Integration */}
       <Footer />
     </main>
   );
