@@ -4,24 +4,114 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 
+// --- APPEARANCE MENU COMPONENT (Polished Theme) ---
+const AppearanceMenu = ({
+  settings,
+  onSettingsChange,
+}: {
+  settings: any;
+  onSettingsChange: (k: string, v: any) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="text-[10px] uppercase tracking-widest border border-white/10 px-4 py-2 hover:bg-[#2a2a35] transition-colors text-white flex items-center gap-2 bg-[#1c1c24] rounded-md"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Appearance</span>
+      </button>
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-64 bg-[#1c1c24] border border-white/10 p-4 z-50 shadow-[0_10px_40px_rgba(0,0,0,0.5)] rounded-md">
+          <h4 className="text-[10px] text-gray-400 uppercase tracking-widest mb-4 border-b border-white/5 pb-2">
+            View Settings
+          </h4>
+
+          <div className="mb-5">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs text-gray-300">Thumbnail Scale</span>
+              <span className="text-[10px] text-[#a855f7] font-mono bg-[#8b5cf6]/10 px-2 py-0.5 rounded">
+                {settings.thumbSize}px
+              </span>
+            </div>
+            <input
+              type="range"
+              min="100"
+              max="350"
+              value={settings.thumbSize}
+              onChange={(e) =>
+                onSettingsChange("thumbSize", Number(e.target.value))
+              }
+              className="w-full accent-[#a855f7] cursor-ew-resize h-1 bg-white/10 rounded-lg appearance-none"
+            />
+          </div>
+
+          <div className="mb-2">
+            <span className="text-xs text-gray-300 block mb-2">
+              Aspect Ratio
+            </span>
+            <div className="flex bg-[#121217] rounded-md border border-white/5 p-1 gap-1">
+              <button
+                onClick={() => onSettingsChange("aspectRatio", "video")}
+                className={`flex-1 py-1.5 text-xs rounded transition-all ${settings.aspectRatio === "video" ? "bg-[#2a2a35] text-white font-medium shadow-sm" : "text-gray-500 hover:text-white"}`}
+              >
+                16:9
+              </button>
+              <button
+                onClick={() => onSettingsChange("aspectRatio", "square")}
+                className={`flex-1 py-1.5 text-xs rounded transition-all ${settings.aspectRatio === "square" ? "bg-[#2a2a35] text-white font-medium shadow-sm" : "text-gray-500 hover:text-white"}`}
+              >
+                1:1
+              </button>
+              <button
+                onClick={() => onSettingsChange("aspectRatio", "portrait")}
+                className={`flex-1 py-1.5 text-xs rounded transition-all ${settings.aspectRatio === "portrait" ? "bg-[#2a2a35] text-white font-medium shadow-sm" : "text-gray-500 hover:text-white"}`}
+              >
+                9:16
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+// ------------------------------------
+
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
+  const [userRole, setUserRole] = useState<"client" | "admin">("client");
+
+  // --- View Settings State ---
+  const [viewSettings, setViewSettings] = useState({
+    thumbSize: 180,
+    aspectRatio: "video",
+  });
+
+  // --- Resizer State (3-Pane Layout) ---
+  const [leftPaneWidth, setLeftPaneWidth] = useState(35); // Default 35% width for file grid
+  const isResizingLeft = useRef(false);
+
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [dragActive, setDragActive] = useState(false);
 
   const [vaultItems, setVaultItems] = useState<any[]>([]);
   const [currentFolder, setCurrentFolder] = useState<string>("");
 
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-
   const [projectStatus, setProjectStatus] = useState("Awaiting Assets");
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const [previewFile, setPreviewFile] = useState<{
     name: string;
@@ -32,102 +122,56 @@ export default function DashboardPage() {
   const [newComment, setNewComment] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // --- NEW: Audio/Visual Frame Marking States (Updated 4 Types) ---
-  const [commentType, setCommentType] = useState<
-    "video" | "color" | "motion" | "audio"
-  >("video");
-  const [selectedX, setSelectedX] = useState<number | null>(null);
-  const [selectedY, setSelectedY] = useState<number | null>(null);
-  const [activeMarker, setActiveMarker] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  // ----------------------------------------------
-
-  const [briefModalOpen, setBriefModalOpen] = useState(false);
-  const [hasBrief, setHasBrief] = useState(false);
-  const [briefData, setBriefData] = useState({
-    project_title: "",
-    video_length: "",
-    editing_style: "",
-    reference_links: "",
-    deadline: "",
-    instructions: "",
-  });
-
-  const [invoices, setInvoices] = useState<any[]>([]);
-
-  const statusSteps = [
-    { name: "Awaiting Assets", desc: "Waiting for client upload" },
-    { name: "Ingesting", desc: "HQ downloading & sorting" },
-    { name: "Offline Edit", desc: "Structuring narrative & cut" },
-    { name: "Color Grading", desc: "Visual enhancement" },
-    { name: "Audio & Master", desc: "Sound design & mixing" },
-    { name: "Ready for Review", desc: "Awaiting client approval" },
-  ];
-
   const router = useRouter();
   const supabase = createClient();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // --- RESIZER LOGIC FOR SPLIT PANE ---
+  const handleMouseMoveLeft = useCallback((e: MouseEvent) => {
+    if (!isResizingLeft.current) return;
+    const container = document.getElementById("main-workspace-container");
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      let newWidth = ((e.clientX - rect.left) / rect.width) * 100;
+      if (newWidth < 20) newWidth = 20; // Min 20%
+      if (newWidth > 70) newWidth = 70; // Max 70%
+      setLeftPaneWidth(newWidth);
+    }
+  }, []);
+
+  const stopResizingLeft = useCallback(() => {
+    isResizingLeft.current = false;
+    document.body.style.cursor = "default";
+    document.removeEventListener("mousemove", handleMouseMoveLeft);
+    document.removeEventListener("mouseup", stopResizingLeft);
+  }, [handleMouseMoveLeft]);
+
+  const startResizingLeft = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isResizingLeft.current = true;
+      document.body.style.cursor = "col-resize";
+      document.addEventListener("mousemove", handleMouseMoveLeft);
+      document.addEventListener("mouseup", stopResizingLeft);
+    },
+    [handleMouseMoveLeft, stopResizingLeft],
+  );
+  // ---------------------
+
+  // Supabase Data Fetching Logic (Untouched)
   const fetchFiles = useCallback(
     async (userId: string, folderPath: string) => {
       const targetPath = folderPath ? `${userId}/${folderPath}` : userId;
       const { data } = await supabase.storage
         .from("client-vault")
-        .list(targetPath, {
-          sortBy: { column: "created_at", order: "desc" },
-        });
-      if (data) {
+        .list(targetPath, { sortBy: { column: "created_at", order: "desc" } });
+      if (data)
         setVaultItems(
           data.filter(
             (item) =>
               item.name !== ".keep" && item.name !== ".emptyFolderPlaceholder",
           ),
         );
-      }
-    },
-    [supabase],
-  );
-
-  const fetchProjectStatus = useCallback(
-    async (userId: string) => {
-      const { data } = await supabase
-        .from("project_status")
-        .select("status, updated_at")
-        .eq("user_id", userId)
-        .single();
-      if (data) {
-        setProjectStatus(data.status);
-        setLastUpdated(new Date(data.updated_at).toLocaleString());
-      }
-    },
-    [supabase],
-  );
-
-  const fetchBrief = useCallback(
-    async (userId: string) => {
-      const { data } = await supabase
-        .from("project_status_details")
-        .select("*")
-        .eq("user_id", userId)
-        .single();
-      if (data) {
-        setHasBrief(true);
-        setBriefData(data);
-      }
-    },
-    [supabase],
-  );
-
-  const fetchInvoices = useCallback(
-    async (userId: string) => {
-      const { data } = await supabase
-        .from("client_invoices")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-      if (data) setInvoices(data);
     },
     [supabase],
   );
@@ -143,81 +187,22 @@ export default function DashboardPage() {
       }
       setUser(session.user);
       await fetchFiles(session.user.id, currentFolder);
-      await fetchProjectStatus(session.user.id);
-      await fetchBrief(session.user.id);
-      await fetchInvoices(session.user.id);
       setLoading(false);
     };
-
     checkUserAndFetchData();
-    const interval = setInterval(async () => {
-      if (user?.id) {
-        await fetchProjectStatus(user.id);
-        await fetchInvoices(user.id);
-      }
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [
-    router,
-    supabase,
-    user?.id,
-    currentFolder,
-    fetchFiles,
-    fetchProjectStatus,
-    fetchBrief,
-    fetchInvoices,
-  ]);
-
-  const handleBriefSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setActionLoading("brief_submit");
-    const { error } = await supabase.from("project_status_details").upsert(
-      {
-        user_id: user.id,
-        ...briefData,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" },
-    );
-    if (!error) {
-      setHasBrief(true);
-      setMessage({
-        type: "success",
-        text: "Project Brief successfully transmitted to HQ.",
-      });
-      setBriefModalOpen(false);
-      setTimeout(() => setMessage(null), 4000);
-      if (projectStatus === "Awaiting Assets") {
-        await supabase.from("project_status").upsert(
-          {
-            user_id: user.id,
-            status: "Ingesting",
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" },
-        );
-        setProjectStatus("Ingesting");
-      }
-    }
-    setActionLoading(null);
-  };
+  }, [router, supabase, currentFolder, fetchFiles]);
 
   const handleCreateFolder = async () => {
     if (!user) return;
     const folderName = prompt("Enter new folder name:");
     if (!folderName || folderName.trim() === "") return;
-    setActionLoading("creating_folder");
     const targetPath = currentFolder
       ? `${user.id}/${currentFolder}/${folderName.trim()}/.keep`
       : `${user.id}/${folderName.trim()}/.keep`;
     const { error } = await supabase.storage
       .from("client-vault")
       .upload(targetPath, new Blob([""]));
-    if (!error) {
-      fetchFiles(user.id, currentFolder);
-    }
-    setActionLoading(null);
+    if (!error) fetchFiles(user.id, currentFolder);
   };
 
   const navigateToFolder = (folderName: string) =>
@@ -239,10 +224,7 @@ export default function DashboardPage() {
         ? `${user.id}/${currentFolder}`
         : user.id;
       const filePath = `${targetPath}/${Date.now()}_${file.name}`;
-      const { error } = await supabase.storage
-        .from("client-vault")
-        .upload(filePath, file);
-      if (error) break;
+      await supabase.storage.from("client-vault").upload(filePath, file);
     }
     setUploadProgress(100);
     fetchFiles(user.id, currentFolder);
@@ -257,14 +239,6 @@ export default function DashboardPage() {
       ? `${user.id}/${currentFolder}/${fileName}`
       : `${user.id}/${fileName}`;
 
-  const handleDeleteFile = async (fileName: string) => {
-    if (!confirm("Delete asset?")) return;
-    const { error } = await supabase.storage
-      .from("client-vault")
-      .remove([getFilePath(fileName)]);
-    if (!error) fetchFiles(user.id, currentFolder);
-  };
-
   const getSignedUrl = async (fileName: string) => {
     const { data } = await supabase.storage
       .from("client-vault")
@@ -272,17 +246,44 @@ export default function DashboardPage() {
     return data?.signedUrl;
   };
 
-  const handleDownload = async (fileName: string) => {
-    const url = await getSignedUrl(fileName);
-    if (url) window.open(url, "_blank");
-  };
-
-  const handleShare = async (fileName: string) => {
+  const handlePreview = async (fileName: string) => {
     const url = await getSignedUrl(fileName);
     if (url) {
-      await navigator.clipboard.writeText(url);
-      setMessage({ type: "success", text: "Link copied!" });
-      setTimeout(() => setMessage(null), 3000);
+      const isVideo = fileName.match(/\.(mp4|webm|ogg|mov|mxf)$/i) !== null;
+      setPreviewFile({ name: fileName, url, isVideo });
+      if (isVideo) {
+        const { data } = await supabase
+          .from("video_comments")
+          .select("*")
+          .eq("file_name", fileName)
+          .order("time_stamp", { ascending: true });
+        if (data) setComments(data);
+      }
+    }
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !previewFile || !videoRef.current || !user)
+      return;
+    const currentTime = videoRef.current.currentTime;
+    videoRef.current.pause();
+    const { data, error } = await supabase
+      .from("video_comments")
+      .insert([
+        {
+          file_name: previewFile.name,
+          user_id: user.id,
+          time_stamp: currentTime,
+          comment_text: newComment.trim(),
+        },
+      ])
+      .select();
+    if (!error && data) {
+      setComments((prev) =>
+        [...prev, data[0]].sort((a, b) => a.time_stamp - b.time_stamp),
+      );
+      setNewComment("");
     }
   };
 
@@ -296,820 +297,407 @@ export default function DashboardPage() {
     return `${m}:${s}`;
   };
 
-  const handlePreview = async (fileName: string) => {
-    const url = await getSignedUrl(fileName);
-    if (url) {
-      const isVideo = fileName.match(/\.(mp4|webm|ogg|mov)$/i) !== null;
-      setPreviewFile({ name: fileName, url, isVideo });
-      setActiveMarker(null);
-      setSelectedX(null);
-      setSelectedY(null);
-      setCommentType("video");
-      if (isVideo) {
-        const { data } = await supabase
-          .from("video_comments")
-          .select("*")
-          .eq("file_name", fileName)
-          .order("time_stamp", { ascending: true });
-        if (data) setComments(data);
-      }
-    }
-  };
-
-  const handleVideoClick = (e: React.MouseEvent<HTMLVideoElement>) => {
-    if (!videoRef.current) return;
-    const rect = videoRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-    setSelectedX(parseFloat(x.toFixed(2)));
-    setSelectedY(parseFloat(y.toFixed(2)));
-    setActiveMarker({ x, y });
-
-    // If audio is selected and they click the video, default back to 'video' for visual feedback
-    if (commentType === "audio") {
-      setCommentType("video");
-    }
-  };
-
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim() || !previewFile || !videoRef.current || !user)
-      return;
-    const currentTime = videoRef.current.currentTime;
-    videoRef.current.pause();
-
-    const isVisual = commentType !== "audio";
-
-    const { data, error } = await supabase
-      .from("video_comments")
-      .insert([
-        {
-          file_name: previewFile.name,
-          user_id: user.id,
-          time_stamp: currentTime,
-          comment_text: newComment.trim(),
-          comment_type: commentType,
-          pos_x: isVisual ? selectedX : null,
-          pos_y: isVisual ? selectedY : null,
-        },
-      ])
-      .select();
-
-    if (!error && data) {
-      setComments((prev) =>
-        [...prev, data[0]].sort((a, b) => a.time_stamp - b.time_stamp),
-      );
-      setNewComment("");
-      setSelectedX(null);
-      setSelectedY(null);
-      setActiveMarker(null);
-    }
-  };
-
-  const jumpToTime = (
-    time: number,
-    posX?: number,
-    posY?: number,
-    type?: string,
-  ) => {
+  const jumpToTime = (time: number) => {
     if (videoRef.current) {
       videoRef.current.currentTime = time;
       videoRef.current.play();
     }
-    if (
-      posX !== undefined &&
-      posY !== undefined &&
-      posX !== null &&
-      posY !== null
-    ) {
-      setActiveMarker({ x: posX, y: posY });
-      // Restore the type for visual context
-      if (type === "video" || type === "color" || type === "motion") {
-        setCommentType(type as "video" | "color" | "motion");
-      }
-    } else {
-      setActiveMarker(null);
-    }
-  };
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
-    else if (e.type === "dragleave") setDragActive(false);
-  };
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0])
-      handleUpload(e.dataTransfer.files);
-  };
-
-  const handlePrintInvoice = (inv: any) => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Invoice - ${inv.invoice_number}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 40px; color: #333; background: #fff; }
-            .header { border-b: 2px solid #d4af37; padding-bottom: 20px; margin-bottom: 30px; }
-            .title { font-size: 28px; font-weight: bold; color: #111; }
-            .meta { margin-top: 20px; line-height: 1.6; }
-            .table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-            .table th, .table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            .table th { background-color: #f5f5f5; }
-            .total { font-size: 18px; font-weight: bold; margin-top: 30px; text-align: right; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="title">KACHNA MEDIA LTD.</div>
-            <p>Official Studio Invoice</p>
-          </div>
-          <div class="meta">
-            <p><strong>Invoice Number:</strong> ${inv.invoice_number}</p>
-            <p><strong>Date:</strong> ${new Date(inv.created_at).toLocaleDateString()}</p>
-            <p><strong>Due Date:</strong> ${new Date(inv.due_date).toLocaleDateString()}</p>
-            <p><strong>Client Account:</strong> ${user.email}</p>
-          </div>
-          <table class="table">
-            <thead>
-              <tr><th>Description / Particulars</th><th>Amount</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>${inv.description}</td><td>BDT ${inv.amount}</td></tr>
-            </tbody>
-          </table>
-          <div class="total">Total Due: BDT ${inv.amount}</div>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
   };
 
   if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center text-gold-primary uppercase tracking-widest text-sm">
+      <div className="h-screen w-screen flex items-center justify-center bg-[#121217] text-[#a855f7] uppercase tracking-widest text-sm font-medium">
         Accessing Vault...
       </div>
     );
 
-  const currentStepIndex = statusSteps.findIndex(
-    (s) => s.name === projectStatus,
-  );
-  const progressPercentage =
-    currentStepIndex === -1
-      ? 0
-      : (currentStepIndex / (statusSteps.length - 1)) * 100;
+  // Dynamic Aspect Ratio Class for Grid Cards Only
+  const aspectClass =
+    viewSettings.aspectRatio === "video"
+      ? "aspect-video"
+      : viewSettings.aspectRatio === "square"
+        ? "aspect-square"
+        : "aspect-[9/16]";
 
   return (
-    <main className="min-h-screen p-6 md:p-10 relative flex justify-center items-start">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gold-primary blur-[200px] opacity-5 -z-10 pointer-events-none"></div>
-
-      <div className="w-full max-w-6xl mt-10">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gold-line pb-6 mb-8 gap-4">
-          <div>
-            <span className="text-[10px] text-gold-primary uppercase tracking-[0.2em] mb-2 block">
-              Secure Workspace
-            </span>
-            <h1 className="text-4xl font-display text-text-white">
-              Client Vault
-            </h1>
-            <p className="text-text-gray text-sm mt-2">
-              Active Session: <span className="text-white">{user?.email}</span>
-            </p>
+    // FULL SCREEN WRAPPER
+    <main className="h-screen w-screen bg-[#121217] text-gray-300 font-sans flex flex-col overflow-hidden">
+      {/* 🌟 TOP NAVIGATION BAR 🌟 */}
+      <header className="h-14 bg-[#1c1c24] border-b border-white/5 flex items-center justify-between px-6 shrink-0 z-20">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#8b5cf6] to-[#d946ef] flex items-center justify-center text-white font-bold text-xs shadow-lg">
+            K
           </div>
+          <h1 className="text-sm font-semibold text-white tracking-wide">
+            Client Vault
+          </h1>
+        </div>
+
+        {/* Toolbar aligned to right */}
+        <div className="flex items-center gap-3">
+          <AppearanceMenu
+            settings={viewSettings}
+            onSettingsChange={(k, v) =>
+              setViewSettings((prev) => ({ ...prev, [k]: v }))
+            }
+          />
+
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="text-[11px] uppercase tracking-widest bg-[#a855f7] hover:bg-[#9333ea] text-white px-4 py-2 font-bold rounded-md transition-colors shadow-md"
+          >
+            Upload
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => handleUpload(e.target.files)}
+            disabled={uploading}
+          />
+
+          <div className="w-px h-6 bg-white/10 mx-2"></div>
+
           <button
             onClick={async () => {
               await supabase.auth.signOut();
               router.push("/access");
             }}
-            className="border border-gold-primary/30 text-gold-primary px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] hover:bg-gold-primary hover:text-black transition-all"
+            className="text-xs text-gray-400 hover:text-white transition-colors"
           >
-            End Session
+            Sign Out
           </button>
         </div>
+      </header>
 
-        <div className="bg-bg-panel border border-white/5 p-6 mb-8 relative overflow-hidden">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-            <div>
-              <h2 className="text-sm uppercase tracking-widest text-text-gray">
-                Production Phase
-              </h2>
-              <p className="text-3xl font-display text-gold-primary mt-1">
-                {projectStatus}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setBriefModalOpen(true)}
-                className={`px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] transition-all ${hasBrief ? "border border-green-500/30 text-green-400 hover:bg-green-500/10" : "bg-gold-primary text-black hover:bg-white"}`}
-              >
-                {hasBrief ? "View / Edit Brief" : "📝 Submit Project Brief"}
-              </button>
-            </div>
-          </div>
-
-          <div className="relative pt-2 pb-4">
-            <div className="absolute top-1/2 left-0 w-full h-1 bg-white/10 -translate-y-1/2"></div>
-            <div
-              className="absolute top-1/2 left-0 h-1 bg-gold-primary -translate-y-1/2 transition-all duration-1000 ease-out"
-              style={{ width: `${progressPercentage}%` }}
-            ></div>
-            <div className="relative flex justify-between">
-              {statusSteps.map((step, index) => {
-                const isCompleted = index <= currentStepIndex;
-                const isActive = index === currentStepIndex;
-                return (
-                  <div
-                    key={step.name}
-                    className="flex flex-col items-center group"
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 bg-bg-panel z-10 transition-all duration-500 ${isActive ? "border-gold-primary shadow-[0_0_15px_rgba(212,175,55,0.8)] scale-125" : isCompleted ? "border-gold-primary" : "border-white/20"}`}
-                    >
-                      {isCompleted && !isActive && (
-                        <div className="w-full h-full bg-gold-primary rounded-full scale-50"></div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {invoices.length > 0 && (
-          <div className="bg-bg-panel border border-white/5 p-6 mb-8">
-            <h2 className="text-sm uppercase tracking-widest text-gold-primary mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
-              <span>💳</span> Financial Statements / Invoices
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {invoices.map((inv) => (
-                <div
-                  key={inv.id}
-                  className={`p-4 border flex justify-between items-center bg-bg-body ${inv.status === "Paid" ? "border-green-500/10" : "border-white/5"}`}
+      {/* 🌟 MAIN WORKSPACE (Split Panes) 🌟 */}
+      <div
+        id="main-workspace-container"
+        className="flex flex-1 overflow-hidden relative"
+      >
+        {/* PANE 1: ASSET GRID */}
+        <section
+          className="flex flex-col bg-[#121217] shrink-0 h-full relative"
+          style={{ width: previewFile ? `${leftPaneWidth}%` : "100%" }}
+        >
+          {/* Breadcrumb & Folder Actions */}
+          <div className="h-12 flex items-center justify-between px-6 border-b border-white/5 bg-[#121217] shrink-0">
+            <div className="flex items-center gap-2">
+              {currentFolder && (
+                <button
+                  onClick={navigateUp}
+                  className="text-gray-400 hover:text-white p-1 rounded-md hover:bg-white/5 transition-colors"
                 >
-                  <div>
-                    <span className="text-[10px] uppercase font-mono tracking-wider bg-white/5 px-2 py-0.5 text-text-gray">
-                      {inv.invoice_number}
-                    </span>
-                    <h4 className="text-white text-sm mt-2 font-medium">
-                      {inv.description}
-                    </h4>
-                    <p className="text-text-gray text-[11px] mt-1">
-                      Due Date: {new Date(inv.due_date).toLocaleDateString()}
-                    </p>
-                    <p className="text-gold-primary text-base font-bold mt-2 font-mono">
-                      ৳ {inv.amount}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-3">
-                    <span
-                      className={`px-2 py-1 text-[9px] uppercase tracking-widest font-bold ${inv.status === "Paid" ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}
-                    >
-                      {inv.status}
-                    </span>
-                    <button
-                      onClick={() => handlePrintInvoice(inv)}
-                      className="text-[10px] text-text-gray hover:text-white uppercase tracking-wider underline transition-colors"
-                    >
-                      📄 Print PDF
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          <div className="lg:col-span-2 flex flex-col">
-            <h2 className="text-xl font-display text-text-white mb-4">
-              Transfer Assets
-            </h2>
-            <div
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              className={`relative border-2 border-dashed transition-all duration-300 p-10 flex flex-col items-center justify-center text-center bg-bg-panel flex-grow min-h-[300px] ${dragActive ? "border-gold-primary bg-gold-primary/5" : "border-white/10 hover:border-gold-primary/50"}`}
-            >
-              <input
-                ref={inputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(e) => handleUpload(e.target.files)}
-                disabled={uploading}
-              />
-              {uploading ? (
-                <div className="flex flex-col items-center w-full max-w-[200px]">
-                  <div className="text-gold-primary text-3xl font-display mb-2">
-                    {uploadProgress}%
-                  </div>
-                  <p className="text-text-gray uppercase tracking-widest text-[10px]">
-                    Encrypting...
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="w-12 h-12 mb-4 rounded-full bg-gold-primary/10 flex items-center justify-center">
-                    <span className="text-gold-primary text-2xl">↓</span>
-                  </div>
-                  <p className="text-text-white text-lg mb-2">
-                    Drag & Drop files
-                  </p>
-                  <button
-                    onClick={() => inputRef.current?.click()}
-                    className="bg-transparent text-gold-primary px-6 py-3 text-[0.75rem] font-bold uppercase tracking-[0.15em] border border-gold-primary hover:bg-gold-primary hover:text-black transition-all"
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
                   >
-                    Browse Device
-                  </button>
-                </>
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                  </svg>
+                </button>
               )}
+              <h2 className="text-sm font-medium text-gray-200">
+                {currentFolder ? currentFolder.split("/").pop() : "All Assets"}
+              </h2>
             </div>
-            {message && (
-              <div
-                className={`mt-4 p-3 text-xs tracking-wider text-center border ${message.type === "success" ? "border-green-500/30 bg-green-500/10 text-green-400" : "border-red-500/30 bg-red-500/10 text-red-400"}`}
+            <button
+              onClick={handleCreateFolder}
+              className="text-gray-400 hover:text-white p-1.5 rounded-md hover:bg-white/5 transition-colors"
+              title="New Folder"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
               >
-                {message.text}
-              </div>
-            )}
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                <line x1="12" y1="11" x2="12" y2="17"></line>
+                <line x1="9" y1="14" x2="15" y2="14"></line>
+              </svg>
+            </button>
           </div>
 
-          <div className="lg:col-span-3 bg-bg-panel border border-white/5 p-6 flex flex-col h-[500px]">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b border-white/5 pb-4 gap-4">
-              <div className="flex items-center gap-3">
-                {currentFolder && (
-                  <button
-                    onClick={navigateUp}
-                    className="text-text-gray hover:text-gold-primary transition-colors text-xs uppercase border border-white/10 px-2 py-1"
-                  >
-                    ← Back
-                  </button>
-                )}
-                <h2 className="text-lg font-display text-text-white">
-                  {currentFolder
-                    ? `/${currentFolder.split("/").pop()}`
-                    : "Root Directory"}
-                </h2>
-              </div>
-              <button
-                onClick={handleCreateFolder}
-                className="text-gold-primary text-[10px] uppercase tracking-widest border border-gold-primary/30 px-3 py-1.5 hover:bg-gold-primary hover:text-black transition-colors"
-              >
-                + New Folder
-              </button>
+          {/* Upload Progress */}
+          {uploading && (
+            <div className="w-full bg-[#1c1c24] h-1 shrink-0">
+              <div
+                className="bg-[#a855f7] h-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
             </div>
+          )}
 
+          {/* Grid Layout */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
             {vaultItems.length === 0 ? (
-              <div className="flex-grow flex items-center justify-center">
-                <p className="text-text-gray text-sm italic">
-                  This directory is empty.
-                </p>
+              <div className="h-full flex flex-col items-center justify-center text-gray-500 gap-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                  strokeDasharray="4 4"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <p className="text-sm">Drag and drop files here</p>
               </div>
             ) : (
-              <ul className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-grow">
+              <div
+                className="grid gap-6 transition-all duration-300 ease-in-out"
+                style={{
+                  gridTemplateColumns: `repeat(auto-fill, minmax(${viewSettings.thumbSize}px, 1fr))`,
+                }}
+              >
                 {vaultItems.map((item) => {
                   const isFolder = !item.metadata;
                   const originalName = isFolder
                     ? item.name
                     : item.name.substring(item.name.indexOf("_") + 1);
                   const isVideoFile =
-                    !isFolder && item.name.match(/\.(mp4|webm|ogg|mov)$/i);
+                    !isFolder && item.name.match(/\.(mp4|webm|ogg|mov|mxf)$/i);
+                  const isSelected = previewFile?.name === item.name;
+
                   if (isFolder) {
                     return (
-                      <li
+                      <div
                         key={item.name}
-                        className="flex justify-between items-center p-3 border border-white/5 hover:border-gold-primary/50 bg-bg-body cursor-pointer"
                         onClick={() => navigateToFolder(item.name)}
+                        className={`bg-[#1c1c24] rounded-lg border border-white/5 hover:border-[#a855f7]/50 cursor-pointer p-4 flex flex-col items-center justify-center gap-3 group transition-all shadow-sm hover:shadow-md ${aspectClass}`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-gold-primary text-xl">📁</span>
-                          <span className="text-text-white text-sm font-mono">
-                            {originalName}
-                          </span>
-                        </div>
-                      </li>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="40"
+                          height="40"
+                          viewBox="0 0 24 24"
+                          fill="#a855f7"
+                          className="opacity-80 group-hover:scale-110 transition-transform"
+                        >
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span className="text-xs text-gray-300 text-center truncate w-full font-medium">
+                          {originalName}
+                        </span>
+                      </div>
                     );
                   }
+
                   return (
-                    <li
+                    <div
                       key={item.id}
-                      className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-white/5 bg-bg-body gap-4"
+                      className={`bg-[#1c1c24] rounded-lg border overflow-hidden group relative flex flex-col transition-all shadow-sm hover:shadow-md ${isSelected ? "border-[#a855f7] ring-1 ring-[#a855f7]" : "border-white/5 hover:border-white/20"}`}
                     >
-                      <div className="overflow-hidden flex items-center gap-3">
-                        <span>{isVideoFile ? "🎬" : "📄"}</span>
-                        <div>
-                          <p className="text-text-white text-sm truncate max-w-[200px]">
-                            {originalName}
-                          </p>
+                      {/* Thumbnail Container */}
+                      <div
+                        className={`w-full bg-[#111116] flex items-center justify-center relative overflow-hidden ${aspectClass}`}
+                      >
+                        {isVideoFile ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="32"
+                            height="32"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            className="text-gray-600"
+                          >
+                            <rect
+                              x="2"
+                              y="2"
+                              width="20"
+                              height="20"
+                              rx="2.18"
+                              ry="2.18"
+                            ></rect>
+                            <line x1="7" y1="2" x2="7" y2="22"></line>
+                            <line x1="17" y1="2" x2="17" y2="22"></line>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <line x1="2" y1="7" x2="7" y2="7"></line>
+                            <line x1="2" y1="17" x2="7" y2="17"></line>
+                            <line x1="17" y1="17" x2="22" y2="17"></line>
+                            <line x1="17" y1="7" x2="22" y2="7"></line>
+                          </svg>
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="32"
+                            height="32"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            className="text-gray-600"
+                          >
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                          </svg>
+                        )}
+
+                        {/* Hover Actions */}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
+                          <button
+                            onClick={() => handlePreview(item.name)}
+                            className="w-10 h-10 bg-[#a855f7] rounded-full flex items-center justify-center text-white hover:scale-105 transition-transform shadow-lg"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                            </svg>
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handlePreview(item.name)}
-                          className="p-2 text-text-gray hover:text-gold-primary"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <polygon points="5 3 19 12 5 21 5 3" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDownload(item.name)}
-                          className="p-2 text-text-gray hover:text-gold-primary"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="7 10 12 15 17 10" />
-                            <line x1="12" x2="12" y1="15" y2="3" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleShare(item.name)}
-                          className="p-2 text-text-gray hover:text-blue-400"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteFile(item.name)}
-                          className="p-2 text-text-gray hover:text-red-500"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M3 6h18" />
-                            <path d="M19 6v14c0 1-1 2-2 2H7" />
-                          </svg>
-                        </button>
+
+                      {/* File Metadata */}
+                      <div className="p-3 bg-[#1c1c24] flex flex-col justify-center h-[60px] shrink-0">
+                        <p className="text-xs text-gray-200 truncate font-medium">
+                          {originalName}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </p>
                       </div>
-                    </li>
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             )}
           </div>
-        </div>
-      </div>
+        </section>
 
-      {briefModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-          <div className="w-full max-w-2xl bg-bg-panel border border-gold-primary/30 shadow-2xl relative">
-            <div className="bg-bg-body p-6 border-b border-white/10 flex justify-between items-center">
-              <h3 className="text-xl font-display text-gold-primary">
-                Project Brief
-              </h3>
-              <button
-                onClick={() => setBriefModalOpen(false)}
-                className="text-text-gray hover:text-white"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
+        {/* 🌟 DRAGGABLE RESIZER BORDER 🌟 */}
+        {previewFile && (
+          <div
+            onMouseDown={startResizingLeft}
+            className="w-[2px] bg-white/5 hover:bg-[#a855f7] hover:w-1 cursor-col-resize z-50 transition-all shrink-0"
+            title="Drag to resize panels"
+          />
+        )}
+
+        {/* 🌟 PANE 2 & 3: VIDEO PLAYER AND COMMENTS 🌟 */}
+        {previewFile && (
+          <div className="flex flex-1 h-full bg-[#050505] overflow-hidden relative min-w-[40%]">
+            {/* PANE 2: Player Container (Takes remaining space dynamically) */}
+            <section className="flex-1 relative flex flex-col h-full overflow-hidden">
+              <div className="absolute top-4 left-4 z-10">
+                <button
+                  onClick={() => setPreviewFile(null)}
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-black/50 hover:bg-white/20 text-white backdrop-blur-md transition-colors border border-white/10"
                 >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-            <form
-              onSubmit={handleBriefSubmit}
-              className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
-            >
-              <div>
-                <label className="block text-xs uppercase text-text-gray mb-2">
-                  Project Title
-                </label>
-                <input
-                  required
-                  type="text"
-                  value={briefData.project_title}
-                  onChange={(e) =>
-                    setBriefData({
-                      ...briefData,
-                      project_title: e.target.value,
-                    })
-                  }
-                  className="w-full bg-bg-body border border-white/10 p-3 text-white focus:border-gold-primary outline-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs uppercase text-text-gray mb-2">
-                    Length
-                  </label>
-                  <select
-                    required
-                    value={briefData.video_length}
-                    onChange={(e) =>
-                      setBriefData({
-                        ...briefData,
-                        video_length: e.target.value,
-                      })
-                    }
-                    className="w-full bg-bg-body border border-white/10 p-3 text-white outline-none"
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
                   >
-                    <option value="Under 1 minute">Under 1 minute</option>
-                    <option value="1 - 3 minutes">1 - 3 minutes</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs uppercase text-text-gray mb-2">
-                    Style
-                  </label>
-                  <select
-                    required
-                    value={briefData.editing_style}
-                    onChange={(e) =>
-                      setBriefData({
-                        ...briefData,
-                        editing_style: e.target.value,
-                      })
-                    }
-                    className="w-full bg-bg-body border border-white/10 p-3 text-white outline-none"
-                  >
-                    <option value="Cinematic / Documentary">
-                      Cinematic / Documentary
-                    </option>
-                  </select>
-                </div>
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
               </div>
-              <div>
-                <label className="block text-xs uppercase text-text-gray mb-2">
-                  Deadline
-                </label>
-                <input
-                  required
-                  type="date"
-                  value={briefData.deadline}
-                  onChange={(e) =>
-                    setBriefData({ ...briefData, deadline: e.target.value })
-                  }
-                  className="w-full bg-bg-body border border-white/10 p-3 text-white outline-none color-scheme-dark"
-                />
-              </div>
-              <div>
-                <label className="block text-xs uppercase text-text-gray mb-2">
-                  Instructions
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={briefData.instructions}
-                  onChange={(e) =>
-                    setBriefData({ ...briefData, instructions: e.target.value })
-                  }
-                  className="w-full bg-bg-body border border-white/10 p-3 text-white outline-none"
-                ></textarea>
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-gold-primary text-black font-bold uppercase py-4 hover:bg-white transition-colors"
-              >
-                Submit Project Brief
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* Video Player Modal with Advanced Frame Marking & Filtering */}
-      {previewFile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm p-4">
-          <button
-            onClick={() => setPreviewFile(null)}
-            className="absolute top-6 right-6 text-text-gray hover:text-white transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-
-          <div className="w-full max-w-7xl h-[85vh] flex flex-col lg:flex-row border border-white/10 bg-bg-panel overflow-hidden">
-            <div className="flex-grow bg-black flex flex-col justify-center relative group select-none">
-              {previewFile.isVideo ? (
-                <div className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden">
+              {/* 🌟 VIDEO FIX: Takes full height/width but maintains aspect ratio without cropping 🌟 */}
+              <div className="flex-1 w-full h-full flex items-center justify-center p-4">
+                {previewFile.isVideo ? (
                   <video
                     ref={videoRef}
                     src={previewFile.url}
                     controls
-                    onClick={handleVideoClick}
-                    className="w-full max-h-[80vh] outline-none object-contain cursor-crosshair relative z-10"
+                    className="w-full h-full object-contain drop-shadow-2xl"
                   />
-                  {activeMarker && (
-                    <div
-                      className="absolute w-4 h-4 bg-gold-primary border-2 border-white rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 shadow-[0_0_15px_rgba(212,175,55,1)] animate-pulse"
-                      style={{
-                        left: `${activeMarker.x}%`,
-                        top: `${activeMarker.y}%`,
-                      }}
-                    />
-                  )}
-                </div>
-              ) : (
-                <img
-                  src={previewFile.url}
-                  alt="Preview"
-                  className="max-h-[60vh] object-contain m-auto"
-                />
-              )}
-            </div>
+                ) : (
+                  <img
+                    src={previewFile.url}
+                    alt="Preview"
+                    className="w-full h-full object-contain drop-shadow-2xl"
+                  />
+                )}
+              </div>
+            </section>
 
+            {/* PANE 3: Comments Sidebar (Fixed width) */}
             {previewFile.isVideo && (
-              <div className="w-full lg:w-[400px] flex flex-col bg-bg-body h-full border-l border-white/5">
-                <div className="p-6 border-b border-white/5 bg-bg-panel flex justify-between items-center">
-                  <h3 className="text-gold-primary uppercase tracking-widest text-xs font-bold font-mono">
-                    Broadcast QC Review
+              <aside className="w-[320px] bg-[#1c1c24] flex flex-col h-full border-l border-white/5 shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.3)] z-10">
+                <div className="h-14 flex items-center px-4 border-b border-white/5 shrink-0 bg-[#1c1c24]">
+                  <h3 className="text-xs font-semibold text-gray-200 uppercase tracking-widest">
+                    Comments
                   </h3>
-                  {selectedX && selectedY && (
-                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5">
-                      Frame Marked
-                    </span>
-                  )}
                 </div>
 
-                <div className="flex-grow overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                  {comments.map((c) => {
-                    const isVisualComment = c.comment_type !== "audio";
-
-                    let badgeColor = "";
-                    let badgeLabel = "";
-
-                    switch (c.comment_type) {
-                      case "video":
-                        badgeColor = "text-indigo-400 bg-indigo-500/10";
-                        badgeLabel = "✂️ Edit";
-                        break;
-                      case "color":
-                        badgeColor = "text-purple-400 bg-purple-500/10";
-                        badgeLabel = "🎨 Color";
-                        break;
-                      case "motion":
-                        badgeColor = "text-amber-400 bg-amber-500/10";
-                        badgeLabel = "🎬 VFX";
-                        break;
-                      case "audio":
-                        badgeColor = "text-cyan-400 bg-cyan-500/10";
-                        badgeLabel = "🎵 Mix";
-                        break;
-                      default:
-                        badgeColor = "text-gray-400 bg-gray-500/10";
-                        badgeLabel = "📝 Note";
-                    }
-
-                    return (
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                  {comments.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-xs text-gray-500 italic">
+                      No feedback yet.
+                    </div>
+                  ) : (
+                    comments.map((c) => (
                       <div
                         key={c.id}
-                        onClick={() =>
-                          jumpToTime(
-                            c.time_stamp,
-                            c.pos_x,
-                            c.pos_y,
-                            c.comment_type,
-                          )
-                        }
-                        className={`border p-3 transition-all cursor-pointer hover:bg-white/[0.02] group relative ${isVisualComment ? "border-gold-primary/20 bg-gold-primary/[0.01]" : "border-white/5 bg-bg-panel"}`}
+                        className="bg-[#2a2a35] rounded-lg p-3 shadow-sm"
                       >
-                        <div className="flex justify-between items-center mb-1.5">
-                          <span className="bg-white/5 group-hover:bg-gold-primary group-hover:text-black text-gold-primary px-2 py-0.5 text-[10px] font-mono font-bold transition-all">
-                            {formatTime(c.time_stamp)}
-                          </span>
-                          <span
-                            className={`text-[9px] uppercase tracking-wider px-2 py-0.5 font-bold font-mono ${badgeColor}`}
-                          >
-                            {badgeLabel}
-                          </span>
-                        </div>
-                        <p className="text-sm text-text-white font-sans leading-relaxed">
+                        <button
+                          onClick={() => jumpToTime(c.time_stamp)}
+                          className="bg-[#8b5cf6]/20 text-[#a855f7] px-2 py-1 rounded text-[10px] font-mono hover:bg-[#8b5cf6]/30 transition-colors font-medium"
+                        >
+                          {formatTime(c.time_stamp)}
+                        </button>
+                        <p className="text-xs text-gray-300 mt-2 leading-relaxed">
                           {c.comment_text}
                         </p>
                       </div>
-                    );
-                  })}
+                    ))
+                  )}
                 </div>
 
                 <form
                   onSubmit={handleAddComment}
-                  className="p-4 border-t border-white/5 bg-bg-panel space-y-3"
+                  className="p-4 bg-[#1c1c24] border-t border-white/5 shrink-0"
                 >
-                  {/* Category Filter Toggle Button Group (4 Columns) */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-1 p-1 bg-black border border-white/10 rounded">
-                    <button
-                      type="button"
-                      onClick={() => setCommentType("video")}
-                      className={`py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all rounded-sm ${commentType === "video" ? "bg-indigo-500 text-white" : "text-text-gray hover:text-white"}`}
-                    >
-                      ✂️ Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCommentType("color")}
-                      className={`py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all rounded-sm ${commentType === "color" ? "bg-purple-500 text-white" : "text-text-gray hover:text-white"}`}
-                    >
-                      🎨 Color
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCommentType("motion")}
-                      className={`py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all rounded-sm ${commentType === "motion" ? "bg-amber-500 text-black" : "text-text-gray hover:text-white"}`}
-                    >
-                      🎬 VFX
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCommentType("audio");
-                        setSelectedX(null);
-                        setSelectedY(null);
-                        setActiveMarker(null);
-                      }}
-                      className={`py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all rounded-sm ${commentType === "audio" ? "bg-cyan-500 text-black" : "text-text-gray hover:text-white"}`}
-                    >
-                      🎵 Mix
-                    </button>
-                  </div>
-
-                  {commentType !== "audio" && !activeMarker && (
-                    <p className="text-[10px] text-text-gray italic text-center">
-                      💡 Tip: Click anywhere directly on the video screen to
-                      pinpoint a visual correction.
-                    </p>
-                  )}
-
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder={
-                        commentType === "audio"
-                          ? "Describe audio mix adjustment..."
-                          : "Describe visual correction..."
-                      }
-                      className="flex-grow bg-bg-body border border-white/10 px-3 py-2 text-white outline-none focus:border-gold-primary text-sm transition-colors"
-                    />
-                    <button
-                      type="submit"
-                      className="bg-gold-primary hover:bg-white text-black px-4 text-xs font-bold uppercase tracking-wider transition-colors"
-                    >
-                      Post
-                    </button>
-                  </div>
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Leave a comment..."
+                    rows={2}
+                    className="w-full bg-[#121217] border border-white/10 rounded-md p-3 text-xs text-white outline-none focus:border-[#a855f7] resize-none mb-3 placeholder-gray-600"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full bg-[#a855f7] hover:bg-[#9333ea] text-white py-2.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-colors shadow-md"
+                  >
+                    Post Comment
+                  </button>
                 </form>
-              </div>
+              </aside>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </main>
   );
 }

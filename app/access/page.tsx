@@ -41,15 +41,16 @@ export default function AccessPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center relative px-6">
+    <main className="min-h-screen flex flex-col items-center justify-center relative px-6 bg-bg-body text-text-gray font-main overflow-x-hidden selection:bg-gold-primary selection:text-black">
       {/* Background Glow Effect */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gold-primary blur-[150px] opacity-10 -z-10 rounded-full pointer-events-none"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gold-primary blur-[200px] opacity-10 -z-10 rounded-full pointer-events-none"></div>
 
-      <div className="w-full max-w-[450px] bg-bg-panel p-10 border border-white/5 shadow-2xl relative">
+      <div className="w-full max-w-[450px] mx-auto bg-bg-panel p-8 md:p-12 border border-white/5 relative shadow-2xl">
+        {/* Original Golden Top Border Line */}
         <div className="absolute top-0 left-0 w-full h-[2px] bg-gold-primary/50"></div>
 
-        <div className="text-center mb-10">
-          <Link href="/" className="inline-block mb-6">
+        <div className="text-center mb-10 relative z-10">
+          <Link href="/" className="inline-block mb-8">
             <Image
               src="/assets/logo.png"
               alt="Kachna Media"
@@ -58,61 +59,75 @@ export default function AccessPage() {
               className="h-[60px] w-auto mx-auto"
             />
           </Link>
-          <h1 className="text-2xl font-display text-text-white mb-2">
-            The Client Vault
-          </h1>
-          <p className="text-[0.85rem] text-gold-primary uppercase tracking-[0.1em]">
+
+          {/* Hardware Accelerated Animation to prevent box shaking */}
+          <span className="text-[10px] uppercase tracking-[0.3em] text-gold-primary block mb-3 animate-pulse transform-gpu will-change-opacity">
             Secure Access Protocol
-          </p>
+          </span>
+          <h1 className="text-3xl md:text-4xl font-display text-white mb-2">
+            Client Vault
+          </h1>
         </div>
 
-        {/* এরর বা সাকসেস মেসেজ দেখানোর জায়গা */}
+        {/* এরর বা সাকসেস মেসেজ */}
         {error && (
-          <div className="mb-6 p-3 border border-red-500/30 bg-red-500/10 text-red-400 text-sm text-center">
+          <div className="mb-6 p-4 border border-red-500/30 bg-red-500/10 text-red-400 text-xs font-mono text-center relative z-10">
             {error}
           </div>
         )}
         {message && (
-          <div className="mb-6 p-3 border border-green-500/30 bg-green-500/10 text-green-400 text-sm text-center">
+          <div className="mb-6 p-4 border border-gold-primary/30 bg-gold-primary/10 text-gold-primary text-xs font-mono text-center relative z-10">
             {message}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <label className="text-[0.75rem] uppercase tracking-[0.1em] text-text-gray ml-1">
-              Email Address
+        <form
+          onSubmit={handleLogin}
+          className="flex flex-col gap-6 relative z-10"
+        >
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-text-gray mb-3 font-mono">
+              Email Address *
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="bg-bg-body border border-white/10 px-4 py-3 text-text-white focus:outline-none focus:border-gold-primary transition-colors"
+              className="w-full bg-black/50 border border-white/10 p-4 text-white text-sm focus:border-gold-primary focus:bg-black focus:outline-none transition-colors"
               required
               disabled={loading}
+              placeholder="hello@brand.com"
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[0.75rem] uppercase tracking-[0.1em] text-text-gray ml-1">
-              Password
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-text-gray mb-3 font-mono">
+              Password *
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="bg-bg-body border border-white/10 px-4 py-3 text-text-white focus:outline-none focus:border-gold-primary transition-colors"
+              className="w-full bg-black/50 border border-white/10 p-4 text-white text-sm focus:border-gold-primary focus:bg-black focus:outline-none transition-colors"
               required
               disabled={loading}
+              placeholder="••••••••"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className={`mt-4 bg-transparent text-gold-primary px-6 py-4 text-[0.85rem] font-bold uppercase tracking-[0.15em] border border-gold-primary transition-all duration-400 ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-gold-primary hover:text-bg-body hover:shadow-[0_0_20px_rgba(212,175,55,0.2)]"}`}
+            className="w-full bg-transparent border border-gold-primary text-gold-primary font-bold uppercase tracking-widest py-4 text-xs hover:bg-gold-primary hover:text-black transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 mt-2"
           >
-            {loading ? "Authenticating..." : "Authenticate"}
+            {loading ? (
+              <>
+                Authenticating{" "}
+                <span className="animate-pulse transform-gpu">...</span>
+              </>
+            ) : (
+              "Authenticate"
+            )}
           </button>
         </form>
       </div>

@@ -1,9 +1,11 @@
+"use client";
+
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-// সম্পূর্ণ সার্ভিসের ডাইনামিক ডেটাবেস
+// সম্পূর্ণ সার্ভিসের ডাইনামিক ডেটাবেস (mediaUrl যুক্ত করা হয়েছে)
 const serviceData = {
   "broadcast-editing": {
     title: "Broadcast Editing",
@@ -16,6 +18,33 @@ const serviceData = {
       "Offline to Online Workflows",
       "Live Action Co-ordination integration",
     ],
+    mediaUrl: "/gifs/broadcast-editing.gif", // 🌟 Placeholder GIF Link
+  },
+  "web-series-drama": {
+    title: "Web-Series & Drama Editing",
+    subtitle: "Narrative structuring and emotional pacing for OTT platforms.",
+    content:
+      "Multi-episode narrative structuring, emotional pacing, dialogue editing, and continuity management tailored for OTT platforms and serial dramas. We ensure character arcs and story loops are flawlessly maintained across the entire season for maximum viewer retention.",
+    features: [
+      "Multi-Episode Structuring",
+      "Emotional Pacing & Dialogue",
+      "Continuity Management",
+      "OTT Platform Compliance",
+    ],
+    mediaUrl: "/gifs/web-series-drama.gif", // 🌟 Placeholder GIF Link
+  },
+  "corporate-commercial": {
+    title: "Corporate & Commercial Video Editing",
+    subtitle: "High-end brand storytelling and dynamic campaigns.",
+    content:
+      "High-end corporate profiles, dynamic brand commercials, and social campaigns optimized for maximum engagement and brand consistency. We deliver polished, agency-level edits that align perfectly with your corporate identity and marketing goals.",
+    features: [
+      "Dynamic Brand Commercials",
+      "Corporate Profiles & Interviews",
+      "Social Media Campaigns",
+      "Brand Consistency & Guidelines",
+    ],
+    mediaUrl: "/gifs/corporate-commercial.gif", // 🌟 Placeholder GIF Link
   },
   "animation-dub": {
     title: "Animation & Dub",
@@ -28,6 +57,7 @@ const serviceData = {
       "International Localization",
       "M&E Track Integration",
     ],
+    mediaUrl: "/gifs/animation-dub.gif", // 🌟 Placeholder GIF Link
   },
   "audio-mastering": {
     title: "Audio Mastering",
@@ -40,6 +70,7 @@ const serviceData = {
       "Noise Reduction & Dialogue Isolation",
       "Multi-Stem Deliverables",
     ],
+    mediaUrl: "/gifs/audio-mastering.gif", // 🌟 Placeholder GIF Link
   },
   "color-grading": {
     title: "Color Grading",
@@ -52,6 +83,7 @@ const serviceData = {
       "Rec.709 & HDR Conversions",
       "Shot-to-Shot Matching",
     ],
+    mediaUrl: "/gifs/color-grading.gif", // 🌟 Placeholder GIF Link
   },
   "motion-vfx": {
     title: "Motion & VFX",
@@ -64,6 +96,7 @@ const serviceData = {
       "Clean Plate Design",
       "Object Tracking & Removal",
     ],
+    mediaUrl: "/gifs/motion-vfx.gif", // 🌟 Placeholder GIF Link
   },
   "archival-restoration": {
     title: "Archival Restoration",
@@ -76,6 +109,7 @@ const serviceData = {
       "Advanced Tape Denoise",
       "Preservation Workflows",
     ],
+    mediaUrl: "/gifs/archival-restoration.gif", // 🌟 Placeholder GIF Link
   },
   "podcast-editing": {
     title: "Podcast Editing",
@@ -88,6 +122,7 @@ const serviceData = {
       "Cinematic Video Switching",
       "Platform-Ready Export",
     ],
+    mediaUrl: "/gifs/podcast-editing.gif", // 🌟 Placeholder GIF Link
   },
 };
 
@@ -95,7 +130,7 @@ export default function ServiceDetail({ params }) {
   const { slug } = params;
   const service = serviceData[slug];
 
-  // যদি কেউ ভুল লিংকে যায়, তাহলে Next.js স্বয়ংক্রিয়ভাবে 404 পেজ দেখাবে
+  // যদি কেউ ভুল লিংকে যায়, তাহলে Next.js স্বয়ংক্রিয়ভাবে 404 পেজ দেখাবে
   if (!service) {
     notFound();
   }
@@ -125,8 +160,21 @@ export default function ServiceDetail({ params }) {
 
       {/* Main Content & Features */}
       <section className="w-full max-w-5xl mx-auto px-6 pb-32 flex-grow grid grid-cols-1 md:grid-cols-3 gap-12">
-        {/* Left Column: Description */}
+        {/* Left Column: Description & Media */}
         <div className="md:col-span-2 space-y-8">
+          {/* 🌟 New GIF/Loop Video Section */}
+          <div className="w-full aspect-video bg-[#0a0a0f] border border-white/10 rounded-lg overflow-hidden relative shadow-[0_0_50px_rgba(255,255,255,0.03)] group">
+            <img
+              src={service.mediaUrl}
+              alt={service.title}
+              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
+              onError={(e) => {
+                e.currentTarget.src =
+                  "https://images.unsplash.com/photo-1618761714954-0b8cd0026356?auto=format&fit=crop&w=1200&q=80";
+              }}
+            />
+          </div>
+
           <p className="text-base md:text-lg leading-relaxed text-text-gray/90 font-light">
             {service.content}
           </p>

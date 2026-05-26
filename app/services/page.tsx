@@ -1,3 +1,5 @@
+"use client";
+
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
@@ -9,6 +11,16 @@ export default function ServicesPage() {
       title: "Broadcast Editing",
       desc: "Multi-camera synchronization, timeline architecture, and strict compliance for television.",
       href: "/services/broadcast-editing",
+    },
+    {
+      title: "Webseries / Drama Editing",
+      desc: "Multi-episode narrative structuring, emotional pacing, dialogue editing, and continuity management tailored for OTT platforms.",
+      href: "/services/web-series-drama",
+    },
+    {
+      title: "Corporate / Commercial Video Editing",
+      desc: "High-end corporate profiles, dynamic brand commercials, and social campaigns optimized for maximum engagement.",
+      href: "/services/corporate-commercial",
     },
     {
       title: "Animation & Dub",
