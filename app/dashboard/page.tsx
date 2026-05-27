@@ -134,6 +134,7 @@ const AppearanceMenu = ({
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const [viewSettings, setViewSettings] = useState({
     cardSize: "M",
@@ -145,7 +146,6 @@ export default function DashboardPage() {
   const [leftPaneWidth, setLeftPaneWidth] = useState(35);
   const isResizingLeft = useRef(false);
 
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -166,38 +166,7 @@ export default function DashboardPage() {
   const supabase = createClient();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // --- RESIZER LOGIC ---
-  const handleMouseMoveLeft = useCallback((e: MouseEvent) => {
-    if (!isResizingLeft.current) return;
-    const container = document.getElementById("grid-preview-container");
-    if (container) {
-      const rect = container.getBoundingClientRect();
-      let newWidth = ((e.clientX - rect.left) / rect.width) * 100;
-      if (newWidth < 20) newWidth = 20;
-      if (newWidth > 70) newWidth = 70;
-      setLeftPaneWidth(newWidth);
-    }
-  }, []);
-
-  const stopResizingLeft = useCallback(() => {
-    isResizingLeft.current = false;
-    document.body.style.cursor = "default";
-    document.removeEventListener("mousemove", handleMouseMoveLeft);
-    document.removeEventListener("mouseup", stopResizingLeft);
-  }, [handleMouseMoveLeft]);
-
-  const startResizingLeft = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      isResizingLeft.current = true;
-      document.body.style.cursor = "col-resize";
-      document.addEventListener("mousemove", handleMouseMoveLeft);
-      document.addEventListener("mouseup", stopResizingLeft);
-    },
-    [handleMouseMoveLeft, stopResizingLeft],
-  );
-
-  // --- FETCH FILES ---
+  // --- FETCH FILES LOGIC ---
   const fetchFiles = useCallback(
     async (userId: string, folderPath: string) => {
       const targetPath = folderPath ? `${userId}/${folderPath}` : userId;
@@ -238,22 +207,90 @@ export default function DashboardPage() {
     [supabase],
   );
 
+  // --- 🌟 BULLETPROOF AUTHENTICATION 🌟 ---
   useEffect(() => {
-    const checkUserAndFetchData = async () => {
+    let isMounted = true;
+
+    const checkAuth = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/access");
-        return;
-      }
-      setUser(session.user);
-      await fetchFiles(session.user.id, currentFolder);
-      setLoading(false);
-    };
-    checkUserAndFetchData();
-  }, [router, supabase, currentFolder, fetchFiles]);
 
+      if (isMounted) {
+        if (session) {
+          // সেশন পেয়ে গেছে, ড্যাশবোর্ড দেখাবে
+          setUser(session.user);
+          setLoading(false);
+        } else {
+          // সাথে সাথে বের না করে দিয়ে ২ সেকেন্ড অপেক্ষা করবে
+          setTimeout(async () => {
+            const { data: delayedData } = await supabase.auth.getSession();
+            if (!delayedData.session && isMounted) {
+              window.location.href = "/access"; // Hard Redirect
+            }
+          }, 2000);
+        }
+      }
+    };
+
+    checkAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && isMounted) {
+        setUser(session.user);
+        setLoading(false);
+      } else if (event === "SIGNED_OUT") {
+        window.location.href = "/access";
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [router, supabase]);
+
+  useEffect(() => {
+    if (user) {
+      fetchFiles(user.id, currentFolder);
+    }
+  }, [user, currentFolder, fetchFiles]);
+  // ------------------------------------------------
+
+  // --- RESIZER LOGIC ---
+  const handleMouseMoveLeft = useCallback((e: MouseEvent) => {
+    if (!isResizingLeft.current) return;
+    const container = document.getElementById("grid-preview-container");
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      let newWidth = ((e.clientX - rect.left) / rect.width) * 100;
+      if (newWidth < 20) newWidth = 20;
+      if (newWidth > 70) newWidth = 70;
+      setLeftPaneWidth(newWidth);
+    }
+  }, []);
+
+  const stopResizingLeft = useCallback(() => {
+    isResizingLeft.current = false;
+    document.body.style.cursor = "default";
+    document.removeEventListener("mousemove", handleMouseMoveLeft);
+    document.removeEventListener("mouseup", stopResizingLeft);
+  }, [handleMouseMoveLeft]);
+
+  const startResizingLeft = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isResizingLeft.current = true;
+      document.body.style.cursor = "col-resize";
+      document.addEventListener("mousemove", handleMouseMoveLeft);
+      document.addEventListener("mouseup", stopResizingLeft);
+    },
+    [handleMouseMoveLeft, stopResizingLeft],
+  );
+
+  // --- ACTIONS LOGIC ---
   const handleCreateFolder = async () => {
     if (!user) return;
     const folderName = prompt("Enter new folder name:");
@@ -362,19 +399,19 @@ export default function DashboardPage() {
 
   if (loading)
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#050505] text-[#d4af37] uppercase tracking-widest text-sm font-medium">
-        Accessing Vault...
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#050505]">
+        <div className="w-10 h-10 border-4 border-[#d4af37] border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-[#d4af37] uppercase tracking-widest text-sm font-medium">
+          Accessing Vault...
+        </p>
       </div>
     );
 
-  // --- Separating Folders and Files ---
+  // --- Visuals & Variables ---
   const folders = vaultItems.filter((item) => !item.metadata);
   const files = vaultItems.filter((item) => item.metadata);
-
-  // Create Breadcrumb Path
   const pathParts = currentFolder ? currentFolder.split("/") : [];
 
-  // Visual Classes
   const aspectClass =
     viewSettings.aspectRatio === "video"
       ? "aspect-video"
@@ -404,7 +441,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* 🌟 NEW: ACTIVE USERS/PRESENCE INDICATOR 🌟 */}
           <div
             className="hidden md:flex items-center bg-[#0a0a0f] border border-white/5 rounded-full px-3 py-1.5 gap-3 mr-4 shadow-inner"
             title="Active Users"
@@ -463,12 +499,12 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* 🌟 MAIN WORKSPACE (Includes Sidebar, Grid, and Preview) 🌟 */}
+      {/* 🌟 MAIN WORKSPACE 🌟 */}
       <div
         id="main-workspace-container"
         className="flex flex-1 overflow-hidden relative"
       >
-        {/* 🌟 NEW: DIRECTORY SIDEBAR (PANE 1) 🌟 */}
+        {/* 🌟 DIRECTORY SIDEBAR 🌟 */}
         <aside className="w-60 bg-[#0a0a0f] border-r border-white/5 flex flex-col shrink-0 z-20">
           <div className="h-14 flex items-center justify-between px-5 border-b border-white/5 shrink-0">
             <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -496,7 +532,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
-            {/* Root Node */}
             <button
               onClick={() => setCurrentFolder("")}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors ${currentFolder === "" ? "bg-[#d4af37]/10 text-[#d4af37]" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}
@@ -504,7 +539,6 @@ export default function DashboardPage() {
               <span className="text-lg">🏠</span> Root Vault
             </button>
 
-            {/* Breadcrumb Path Nodes */}
             {pathParts.map((part, idx) => {
               const path = pathParts.slice(0, idx + 1).join("/");
               return (
@@ -519,7 +553,6 @@ export default function DashboardPage() {
               );
             })}
 
-            {/* Subfolders List (Derived from current vaultItems) */}
             {folders.length > 0 && (
               <div className={`pt-3 ${currentFolder ? "pl-8" : "pl-4"}`}>
                 <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2 px-3">
@@ -540,17 +573,16 @@ export default function DashboardPage() {
           </div>
         </aside>
 
-        {/* 🌟 WRAPPER FOR GRID AND PREVIEW (Flex area remaining after Sidebar) 🌟 */}
+        {/* 🌟 WRAPPER FOR GRID AND PREVIEW 🌟 */}
         <div
           id="grid-preview-container"
           className="flex flex-1 overflow-hidden relative"
         >
-          {/* PANE 2: ASSET GRID (NOW ONLY SHOWS FILES) */}
+          {/* PANE 2: ASSET GRID (FILES) */}
           <section
             className="flex flex-col bg-[#050505] shrink-0 h-full relative transition-none"
             style={{ width: previewFile ? `${leftPaneWidth}%` : "100%" }}
           >
-            {/* Grid Toolbar (Simplified since navigation is in sidebar) */}
             <div className="h-14 flex items-center justify-between px-6 border-b border-white/5 bg-[#121217] shrink-0">
               <h2 className="text-sm font-medium text-gray-200 flex items-center gap-2">
                 {currentFolder ? currentFolder.split("/").pop() : "All Assets"}
@@ -569,7 +601,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Grid Map (Files Only) */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
               {files.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-gray-500 gap-3">
@@ -727,7 +758,6 @@ export default function DashboardPage() {
                   </button>
                 </div>
 
-                {/* MAIN PLAYER CONTAINER */}
                 <div className="flex-1 w-full h-full flex items-center justify-center p-4 lg:p-10 overflow-hidden">
                   {previewFile.isVideo ? (
                     <video
