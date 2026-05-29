@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
 
 export default function AdminPortal() {
   const [loading, setLoading] = useState(true);
@@ -46,23 +45,15 @@ export default function AdminPortal() {
   });
   // -----------------------------------
 
-  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
-    const checkAdminSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/access");
-        return;
-      }
+    const loadAdminData = async () => {
       await fetchClientFolders();
       setLoading(false);
     };
-    checkAdminSession();
-  }, [router, supabase]);
+    loadAdminData();
+  }, [supabase]);
 
   const fetchClientFolders = async () => {
     const { data } = await supabase.storage.from("client-vault").list();

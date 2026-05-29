@@ -207,42 +207,31 @@ export default function DashboardPage() {
     [supabase],
   );
 
-  // --- 🌟 BULLETPROOF AUTHENTICATION 🌟 ---
+  // Session gate is handled by middleware; load user for vault paths and sign-out.
   useEffect(() => {
     let isMounted = true;
 
-    const checkAuth = async () => {
+    const loadUser = async () => {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (isMounted) {
-        if (session) {
-          // সেশন পেয়ে গেছে, ড্যাশবোর্ড দেখাবে
-          setUser(session.user);
-          setLoading(false);
-        } else {
-          // সাথে সাথে বের না করে দিয়ে ২ সেকেন্ড অপেক্ষা করবে
-          setTimeout(async () => {
-            const { data: delayedData } = await supabase.auth.getSession();
-            if (!delayedData.session && isMounted) {
-              window.location.href = "/access"; // Hard Redirect
-            }
-          }, 2000);
-        }
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+      if (isMounted && currentUser) {
+        setUser(currentUser);
+        setLoading(false);
       }
     };
 
-    checkAuth();
+    loadUser();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session && isMounted) {
+      if (!isMounted) return;
+      if (session?.user) {
         setUser(session.user);
         setLoading(false);
       } else if (event === "SIGNED_OUT") {
-        window.location.href = "/access";
+        router.push("/access");
       }
     });
 
