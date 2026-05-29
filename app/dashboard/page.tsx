@@ -250,6 +250,39 @@ export default function DashboardPage() {
       fetchFiles(user.id, currentFolder);
     }
   }, [user, currentFolder, fetchFiles]);
+
+  // 🛠️ NEW: KEYBOARD SHORTCUTS FOR ADVANCED VIDEO REVIEWS (Frame.io Style)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!videoRef.current || !previewFile?.isVideo) return;
+
+      // Ignore shortcuts if the user is typing inside inputs or textareas
+      if (
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA"
+      ) {
+        return;
+      }
+
+      if (e.key === ",") {
+        // Less than sign / comma key: Backward 1 frame (~0.04s at 24fps)
+        e.preventDefault();
+        videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 0.04);
+      } else if (e.key === ".") {
+        // Greater than sign / period key: Forward 1 frame (~0.04s at 24fps)
+        e.preventDefault();
+        videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 0.04);
+      } else if (e.key === " ") {
+        // Spacebar: Toggle Play/Pause
+        e.preventDefault();
+        if (videoRef.current.paused) videoRef.current.play();
+        else videoRef.current.pause();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewFile]);
   // ------------------------------------------------
 
   // --- RESIZER LOGIC ---
@@ -348,7 +381,7 @@ export default function DashboardPage() {
     }
   };
 
-  // 🛠️ NEW: ASSET MANAGEMENT CRUD FUNCTIONS (Delete & Rename)
+  // ASSET MANAGEMENT CRUD FUNCTIONS (Delete & Rename)
   const handleDeleteFile = async (fileName: string) => {
     if (!window.confirm("Are you sure you want to delete this file permanently?")) return;
     const filePath = getFilePath(fileName);
@@ -742,7 +775,7 @@ export default function DashboardPage() {
                               {new Date(item.created_at).toLocaleDateString()}
                             </p>
                             
-                            {/* 🛠️ UPGRADED CRUD ACTIONS OVERLAY BUTTONS */}
+                            {/* CRUD ACTIONS OVERLAY BUTTONS */}
                             <div className="absolute right-2 bottom-2 flex items-center gap-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity bg-[#121217] pl-2">
                               <button
                                 onClick={() => handleRenameFile(item.name)}
@@ -796,12 +829,77 @@ export default function DashboardPage() {
 
                 <div className="flex-1 w-full h-full flex items-center justify-center p-4 lg:p-10 overflow-hidden">
                   {previewFile.isVideo ? (
-                    <video
-                      ref={videoRef}
-                      src={previewFile.url}
-                      controls
-                      className={`max-w-full max-h-full bg-black shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded border border-white/5 transition-all duration-500 ease-in-out ${aspectClass} ${objectFitClass}`}
-                    />
+                    {/* 🛠️ UPGRADED: WRAPPER FOR VIDEO AND ADVANCED PLAYER CONTROLS */}
+                    <div className="flex flex-col items-center gap-4 max-w-full max-h-full">
+                      <video
+                        ref={videoRef}
+                        src={previewFile.url}
+                        controls
+                        className={`max-w-full bg-black shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded border border-white/5 transition-all duration-500 ease-in-out ${aspectClass} ${objectFitClass}`}
+                      />
+                      
+                      {/* ADVANCED MEDIA CONTROL BAR */}
+                      <div className="flex items-center gap-4 bg-[#121217] border border-white/10 px-4 py-2 rounded-full shadow-xl text-xs select-none">
+                        {/* Playback Speed Controller */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold">Speed:</span>
+                          <select
+                            onChange={(e) => {
+                              if (videoRef.current) videoRef.current.playbackRate = parseFloat(e.target.value);
+                            }}
+                            defaultValue="1"
+                            className="bg-[#050505] border border-white/10 rounded px-2 py-0.5 text-white text-[11px] outline-none focus:border-[#d4af37] cursor-pointer"
+                          >
+                            <option value="0.25">0.25x</option>
+                            <option value="0.5">0.5x</option>
+                            <option value="1">1.0x (Normal)</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="2">2.0x</option>
+                          </select>
+                        </div>
+
+                        <div className="w-px h-4 bg-white/10"></div>
+
+                        {/* Frame-by-Frame Seek Controls */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold mr-1">Frame:</span>
+                          <button
+                            onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 0.04); }}
+                            className="px-2 py-1 bg-[#050505] hover:bg-[#d4af37]/20 border border-white/5 hover:border-[#d4af37]/30 text-gray-300 hover:text-[#d4af37] rounded transition-colors text-[10px] font-medium"
+                            title="Backward 1 Frame (Shortcut: ,)"
+                          >
+                            ◀ Prev
+                          </button>
+                          <button
+                            onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 0.04); }}
+                            className="px-2 py-1 bg-[#050505] hover:bg-[#d4af37]/20 border border-white/5 hover:border-[#d4af37]/30 text-gray-300 hover:text-[#d4af37] rounded transition-colors text-[10px] font-medium"
+                            title="Forward 1 Frame (Shortcut: .)"
+                          >
+                            Next ▶
+                          </button>
+                        </div>
+
+                        <div className="w-px h-4 bg-white/10"></div>
+
+                        {/* Quick Seek Jumps */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 5); }}
+                            className="px-2 py-1 bg-[#050505] hover:bg-white/5 border border-white/5 text-gray-400 hover:text-white rounded text-[10px] font-mono"
+                            title="Rewind 5 Seconds"
+                          >
+                            -5s
+                          </button>
+                          <button
+                            onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 5); }}
+                            className="px-2 py-1 bg-[#050505] hover:bg-white/5 border border-white/5 text-gray-400 hover:text-white rounded text-[10px] font-mono"
+                            title="Forward 5 Seconds"
+                          >
+                            +5s
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <img
                       src={previewFile.url}
