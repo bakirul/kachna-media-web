@@ -153,7 +153,7 @@ export default function DashboardPage() {
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [currentFolder, setCurrentFolder] = useState<string>("");
 
-  // 🛠️ FILTER & SEARCH STATES Added
+  // FILTER & SEARCH STATES
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
@@ -211,7 +211,7 @@ export default function DashboardPage() {
     [supabase],
   );
 
-  // Session gate is handled by middleware; load user for vault paths and sign-out.
+  // Session gate and observer
   useEffect(() => {
     let isMounted = true;
 
@@ -328,7 +328,7 @@ export default function DashboardPage() {
   const getSignedUrl = async (fileName: string) => {
     const { data } = await supabase.storage
       .from("client-vault")
-      .createSignedUrl(getFilePath(fileName), 43200); // 12 Hours Signed URL Timeout Securely
+      .createSignedUrl(getFilePath(fileName), 43200);
     return data?.signedUrl;
   };
 
@@ -345,6 +345,54 @@ export default function DashboardPage() {
           .order("time_stamp", { ascending: true });
         if (data) setComments(data);
       }
+    }
+  };
+
+  // 🛠️ NEW: ASSET MANAGEMENT CRUD FUNCTIONS (Delete & Rename)
+  const handleDeleteFile = async (fileName: string) => {
+    if (!window.confirm("Are you sure you want to delete this file permanently?")) return;
+    const filePath = getFilePath(fileName);
+    const { error } = await supabase.storage.from("client-vault").remove([filePath]);
+    if (!error) {
+      if (previewFile?.name === fileName) setPreviewFile(null);
+      fetchFiles(user.id, currentFolder);
+    } else {
+      alert("Error deleting file: " + error.message);
+    }
+  };
+
+  const handleRenameFile = async (oldName: string) => {
+    const underscoreIdx = oldName.indexOf("_");
+    const prefix = underscoreIdx !== -1 ? oldName.substring(0, underscoreIdx + 1) : "";
+    const actualNameWithExt = underscoreIdx !== -1 ? oldName.substring(underscoreIdx + 1) : oldName;
+    const dotIdx = actualNameWithExt.lastIndexOf('.');
+    const actualNameOnly = dotIdx !== -1 ? actualNameWithExt.substring(0, dotIdx) : actualNameWithExt;
+    const ext = dotIdx !== -1 ? actualNameWithExt.substring(dotIdx) : "";
+
+    const newCleanName = prompt("Enter new name for this file:", actualNameOnly);
+    if (!newCleanName || newCleanName.trim() === "") return;
+
+    const newName = `${prefix}${newCleanName.trim()}${ext}`;
+    const oldPath = getFilePath(oldName);
+    const newPath = currentFolder ? `${user.id}/${currentFolder}/${newName}` : `${user.id}/${newName}`;
+
+    const { error } = await supabase.storage.from("client-vault").move(oldPath, newPath);
+    if (!error) {
+      if (previewFile?.name === oldName) setPreviewFile(null);
+      fetchFiles(user.id, currentFolder);
+    } else {
+      alert("Error renaming file: " + error.message);
+    }
+  };
+
+  const handleDeleteFolder = async (folderName: string) => {
+    if (!window.confirm(`Are you sure you want to delete the folder "${folderName}"? (Make sure it is empty)`)) return;
+    const folderPath = currentFolder ? `${user.id}/${currentFolder}/${folderName}` : `${user.id}/${folderName}`;
+    const { error } = await supabase.storage.from("client-vault").remove([`${folderPath}/.keep`]);
+    if (!error) {
+      fetchFiles(user.id, currentFolder);
+    } else {
+      alert("Could not delete folder. Ensure no other files remain inside.");
     }
   };
 
@@ -390,22 +438,12 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading)
-    return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#050505]">
-        <div className="w-10 h-10 border-4 border-[#d4af37] border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-[#d4af37] uppercase tracking-widest text-sm font-medium">
-          Accessing Vault...
-        </p>
-      </div>
-    );
-
   // --- Visuals & Variables ---
   const folders = vaultItems.filter((item) => !item.metadata);
   const files = vaultItems.filter((item) => item.metadata);
   const pathParts = currentFolder ? currentFolder.split("/") : [];
 
-  // 🛠️ FILTER AND SEARCH MATHEMATICS
+  // FILTER AND SEARCH MATHEMATICS
   const filteredFiles = files.filter((item) => {
     const originalName = item.name.substring(item.name.indexOf("_") + 1).toLowerCase();
     const matchesSearch = originalName.includes(searchQuery.toLowerCase());
@@ -508,10 +546,7 @@ export default function DashboardPage() {
       </header>
 
       {/* 🌟 MAIN WORKSPACE 🌟 */}
-      <div
-        id="main-workspace-container"
-        className="flex flex-1 overflow-hidden relative"
-      >
+      <div id="main-workspace-container" className="flex flex-1 overflow-hidden relative">
         {/* 🌟 DIRECTORY SIDEBAR 🌟 */}
         <aside className="w-60 bg-[#0a0a0f] border-r border-white/5 flex flex-col shrink-0 z-20">
           <div className="h-14 flex items-center justify-between px-5 border-b border-white/5 shrink-0">
@@ -523,15 +558,7 @@ export default function DashboardPage() {
               className="text-[#d4af37] hover:text-white transition-colors"
               title="New Folder"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                 <line x1="12" y1="11" x2="12" y2="17"></line>
                 <line x1="9" y1="14" x2="15" y2="14"></line>
@@ -567,14 +594,21 @@ export default function DashboardPage() {
                   Subfolders
                 </p>
                 {folders.map((f) => (
-                  <button
-                    key={f.name}
-                    onClick={() => navigateToFolder(f.name)}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
-                  >
-                    <span className="text-lg">📁</span>{" "}
-                    <span className="truncate">{f.name}</span>
-                  </button>
+                  <div key={f.name} className="group/folder flex items-center justify-between rounded-md text-xs font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-colors pr-2">
+                    <button
+                      onClick={() => navigateToFolder(f.name)}
+                      className="flex-1 flex items-center gap-3 px-3 py-2 text-left truncate"
+                    >
+                      <span className="text-lg">📁</span> <span className="truncate">{f.name}</span>
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteFolder(f.name); }}
+                      className="opacity-0 group-hover/folder:opacity-100 p-1 text-gray-500 hover:text-red-400 transition-all"
+                      title="Delete Folder"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -582,16 +616,13 @@ export default function DashboardPage() {
         </aside>
 
         {/* 🌟 WRAPPER FOR GRID AND PREVIEW 🌟 */}
-        <div
-          id="grid-preview-container"
-          className="flex flex-1 overflow-hidden relative"
-        >
+        <div id="grid-preview-container" className="flex flex-1 overflow-hidden relative">
           {/* PANE 2: ASSET GRID (FILES) */}
           <section
             className="flex flex-col bg-[#050505] shrink-0 h-full relative transition-none"
             style={{ width: previewFile ? `${leftPaneWidth}%` : "100%" }}
           >
-            {/* 🛠️ UPGRADED ADVANCED FILTERING HEADER BAR 🛠️ */}
+            {/* ADVANCED FILTERING HEADER BAR */}
             <div className="h-14 flex flex-col md:flex-row items-start md:items-center justify-between px-6 border-b border-white/5 bg-[#121217] shrink-0 gap-4 md:gap-0 py-2 md:py-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-medium text-gray-200">
@@ -602,7 +633,6 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              {/* Filtering Controls */}
               <div className="flex items-center gap-3 w-full md:w-auto">
                 {/* Search Bar Input */}
                 <div className="relative flex-1 md:flex-initial">
@@ -642,34 +672,15 @@ export default function DashboardPage() {
 
             {uploading && (
               <div className="w-full bg-[#1c1c24] h-1 shrink-0">
-                <div
-                  className="bg-[#d4af37] h-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
+                <div className="bg-[#d4af37] h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
               </div>
             )}
 
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
               {filteredFiles.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-gray-500 gap-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="48"
-                    height="48"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1"
-                    strokeDasharray="4 4"
-                  >
-                    <rect
-                      x="3"
-                      y="3"
-                      width="18"
-                      height="18"
-                      rx="2"
-                      ry="2"
-                    ></rect>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                     <circle cx="8.5" cy="8.5" r="1.5"></circle>
                     <polyline points="21 15 16 10 5 21"></polyline>
                   </svg>
@@ -678,20 +689,12 @@ export default function DashboardPage() {
               ) : (
                 <div
                   className="grid gap-6 transition-all duration-300 ease-in-out"
-                  style={{
-                    gridTemplateColumns: `repeat(auto-fill, minmax(${gridColumnSize}px, 1fr))`,
-                  }}
+                  style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridColumnSize}px, 1fr))` }}
                 >
                   {filteredFiles.map((item) => {
-                    const originalName = item.name.substring(
-                      item.name.indexOf("_") + 1,
-                    );
-                    const isVideoFile = item.name.match(
-                      /\.(mp4|webm|ogg|mov|mxf)$/i,
-                    );
-                    const isImage = item.name.match(
-                      /\.(jpg|jpeg|png|gif|webp)$/i,
-                    );
+                    const originalName = item.name.substring(item.name.indexOf("_") + 1);
+                    const isVideoFile = item.name.match(/\.(mp4|webm|ogg|mov|mxf)$/i);
+                    const isImage = item.name.match(/\.(jpg|jpeg|png|gif|webp)$/i);
                     const isSelected = previewFile?.name === item.name;
                     const fileUrl = fileUrls[item.name];
 
@@ -700,33 +703,14 @@ export default function DashboardPage() {
                         key={item.id}
                         className={`bg-[#121217] rounded-lg border overflow-hidden group relative flex flex-col transition-all shadow-sm hover:shadow-md ${isSelected ? "border-[#d4af37] ring-1 ring-[#d4af37]" : "border-white/5 hover:border-white/20"}`}
                       >
-                        <div
-                          className={`w-full bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden transition-all duration-300 ${aspectClass}`}
-                        >
+                        <div className={`w-full bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden transition-all duration-300 ${aspectClass}`}>
                           {fileUrl ? (
                             isVideoFile ? (
-                              <video
-                                src={`${fileUrl}#t=0.5`}
-                                className={`w-full h-full ${objectFitClass}`}
-                                preload="metadata"
-                              />
+                              <video src={`${fileUrl}#t=0.5`} className={`w-full h-full ${objectFitClass}`} preload="metadata" />
                             ) : isImage ? (
-                              <img
-                                src={fileUrl}
-                                className={`w-full h-full ${objectFitClass}`}
-                                alt={originalName}
-                              />
+                              <img src={fileUrl} className={`w-full h-full ${objectFitClass}`} alt={originalName} />
                             ) : (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="32"
-                                height="32"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                className="text-gray-600"
-                              >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-600">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
                                 <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -742,13 +726,7 @@ export default function DashboardPage() {
                               onClick={() => handlePreview(item.name)}
                               className="w-10 h-10 bg-[#d4af37] rounded-full flex items-center justify-center text-black hover:scale-105 transition-transform shadow-lg"
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                              >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
                               </svg>
                             </button>
@@ -756,13 +734,31 @@ export default function DashboardPage() {
                         </div>
 
                         {viewSettings.showCardInfo && (
-                          <div className="p-3 bg-[#121217] flex flex-col justify-center shrink-0 border-t border-white/5">
-                            <p className="text-xs text-gray-200 truncate font-medium">
+                          <div className="p-3 bg-[#121217] flex flex-col justify-center shrink-0 border-t border-white/5 relative group/card">
+                            <p className="text-xs text-gray-200 truncate font-medium pr-12">
                               {originalName}
                             </p>
                             <p className="text-[10px] text-gray-500 mt-1">
                               {new Date(item.created_at).toLocaleDateString()}
                             </p>
+                            
+                            {/* 🛠️ UPGRADED CRUD ACTIONS OVERLAY BUTTONS */}
+                            <div className="absolute right-2 bottom-2 flex items-center gap-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity bg-[#121217] pl-2">
+                              <button
+                                onClick={() => handleRenameFile(item.name)}
+                                className="p-1 text-gray-400 hover:text-[#d4af37] transition-colors"
+                                title="Rename File"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteFile(item.name)}
+                                className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                                title="Delete File"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -791,15 +787,7 @@ export default function DashboardPage() {
                     onClick={() => setPreviewFile(null)}
                     className="flex items-center justify-center w-8 h-8 rounded-full bg-black/50 hover:bg-[#d4af37] text-white hover:text-black backdrop-blur-md transition-colors border border-white/10 shadow-lg"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
                       <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
@@ -839,10 +827,7 @@ export default function DashboardPage() {
                       </div>
                     ) : (
                       comments.map((c) => (
-                        <div
-                          key={c.id}
-                          className="bg-[#1c1c24] rounded-lg p-3 shadow-sm border border-white/5"
-                        >
+                        <div key={c.id} className="bg-[#1c1c24] rounded-lg p-3 shadow-sm border border-white/5">
                           <button
                             onClick={() => jumpToTime(c.time_stamp)}
                             className="bg-[#d4af37]/20 text-[#d4af37] px-2 py-1 rounded text-[10px] font-mono hover:bg-[#d4af37]/30 transition-colors font-medium"
@@ -857,10 +842,7 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  <form
-                    onSubmit={handleAddComment}
-                    className="p-4 bg-[#121217] border-t border-white/5 shrink-0"
-                  >
+                  <form onSubmit={handleAddComment} className="p-4 bg-[#121217] border-t border-white/5 shrink-0">
                     <textarea
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
