@@ -153,6 +153,10 @@ export default function DashboardPage() {
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [currentFolder, setCurrentFolder] = useState<string>("");
 
+  // 🛠️ FILTER & SEARCH STATES Added
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
+
   const [previewFile, setPreviewFile] = useState<{
     name: string;
     url: string;
@@ -324,7 +328,7 @@ export default function DashboardPage() {
   const getSignedUrl = async (fileName: string) => {
     const { data } = await supabase.storage
       .from("client-vault")
-      .createSignedUrl(getFilePath(fileName), 604800);
+      .createSignedUrl(getFilePath(fileName), 43200); // 12 Hours Signed URL Timeout Securely
     return data?.signedUrl;
   };
 
@@ -400,6 +404,21 @@ export default function DashboardPage() {
   const folders = vaultItems.filter((item) => !item.metadata);
   const files = vaultItems.filter((item) => item.metadata);
   const pathParts = currentFolder ? currentFolder.split("/") : [];
+
+  // 🛠️ FILTER AND SEARCH MATHEMATICS
+  const filteredFiles = files.filter((item) => {
+    const originalName = item.name.substring(item.name.indexOf("_") + 1).toLowerCase();
+    const matchesSearch = originalName.includes(searchQuery.toLowerCase());
+
+    if (activeTab === "all") return matchesSearch;
+    if (activeTab === "video") {
+      return matchesSearch && item.name.match(/\.(mp4|webm|ogg|mov|mxf)$/i) !== null;
+    }
+    if (activeTab === "image") {
+      return matchesSearch && item.name.match(/\.(jpg|jpeg|png|gif|webp)$/i) !== null;
+    }
+    return matchesSearch;
+  });
 
   const aspectClass =
     viewSettings.aspectRatio === "video"
@@ -572,13 +591,53 @@ export default function DashboardPage() {
             className="flex flex-col bg-[#050505] shrink-0 h-full relative transition-none"
             style={{ width: previewFile ? `${leftPaneWidth}%` : "100%" }}
           >
-            <div className="h-14 flex items-center justify-between px-6 border-b border-white/5 bg-[#121217] shrink-0">
-              <h2 className="text-sm font-medium text-gray-200 flex items-center gap-2">
-                {currentFolder ? currentFolder.split("/").pop() : "All Assets"}
+            {/* 🛠️ UPGRADED ADVANCED FILTERING HEADER BAR 🛠️ */}
+            <div className="h-14 flex flex-col md:flex-row items-start md:items-center justify-between px-6 border-b border-white/5 bg-[#121217] shrink-0 gap-4 md:gap-0 py-2 md:py-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-medium text-gray-200">
+                  {currentFolder ? currentFolder.split("/").pop() : "All Assets"}
+                </h2>
                 <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">
-                  {files.length} items
+                  {filteredFiles.length} of {files.length} items
                 </span>
-              </h2>
+              </div>
+
+              {/* Filtering Controls */}
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                {/* Search Bar Input */}
+                <div className="relative flex-1 md:flex-initial">
+                  <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search assets..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full md:w-44 bg-[#050505] border border-white/10 rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] transition-colors"
+                  />
+                </div>
+
+                {/* Filter Grid Tabs */}
+                <div className="flex bg-[#050505] border border-white/10 rounded-md p-0.5 shrink-0">
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "video", label: "Videos" },
+                    { id: "image", label: "Images" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`px-3 py-1 text-[11px] font-medium rounded transition-all ${activeTab === tab.id ? "bg-[#d4af37] text-black font-bold shadow-sm" : "text-gray-400 hover:text-white"}`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {uploading && (
@@ -591,7 +650,7 @@ export default function DashboardPage() {
             )}
 
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-              {files.length === 0 ? (
+              {filteredFiles.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-gray-500 gap-3">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -614,7 +673,7 @@ export default function DashboardPage() {
                     <circle cx="8.5" cy="8.5" r="1.5"></circle>
                     <polyline points="21 15 16 10 5 21"></polyline>
                   </svg>
-                  <p className="text-sm">No files in this directory</p>
+                  <p className="text-sm">No files found matching criteria</p>
                 </div>
               ) : (
                 <div
@@ -623,7 +682,7 @@ export default function DashboardPage() {
                     gridTemplateColumns: `repeat(auto-fill, minmax(${gridColumnSize}px, 1fr))`,
                   }}
                 >
-                  {files.map((item) => {
+                  {filteredFiles.map((item) => {
                     const originalName = item.name.substring(
                       item.name.indexOf("_") + 1,
                     );
