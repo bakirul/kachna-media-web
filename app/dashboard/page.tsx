@@ -190,7 +190,7 @@ export default function DashboardPage() {
           );
           const { data: signedUrls } = await supabase.storage
             .from("client-vault")
-            .createSignedUrls(pathsToSign, 604800);
+            .createSignedUrls(pathsToSign, 43200);
 
           if (signedUrls) {
             const urlMap: Record<string, string> = {};
