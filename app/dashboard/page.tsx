@@ -474,13 +474,9 @@ export default function DashboardPage() {
   };
 
   const handleEditComment = async (commentId: string, currentText: string) => {
-    // ১. প্রম্পট ওপেন হবে এবং আগের কমেন্টটি অলরেডি ইনপুট বক্সে লেখা থাকবে
     const newCommentText = prompt("Edit your feedback:", currentText);
-
-    // ২. ক্লায়েন্ট যদি ক্যানসেল চাপ দেয়, তবে প্রসেস বন্ধ হবে
     if (newCommentText === null) return;
 
-    // ৩. ক্লায়েন্ট যদি সব টেক্সট মুছে খালি করে সাবমিট করতে চায়, তবে তা আটকে দেওয়া হবে
     if (!newCommentText.trim()) {
       alert("Comment cannot be empty! If you want to remove it, please use the delete button.");
       return;
@@ -488,14 +484,12 @@ export default function DashboardPage() {
 
     const cleanedText = newCommentText.trim();
 
-    // ৪. স্ক্রিনে কমেন্টটি সাথে সাথে আপডেট করে দেওয়া (Optimistic Update)
     setComments((prev) =>
       prev.map((comment) =>
         comment.id === commentId ? { ...comment, comment_text: cleanedText } : comment
       )
     );
 
-    // ৫. সুপাবেস ডেটাবেসে কমেন্টটি আপডেট করা
     const { error } = await supabase
       .from("video_comments")
       .update({ comment_text: cleanedText })
@@ -896,11 +890,12 @@ export default function DashboardPage() {
                 <div className="flex-1 w-full h-full flex items-center justify-center p-4 lg:p-10 overflow-hidden">
                   {previewFile.isVideo ? (
                     <div className="flex flex-col items-center gap-4 max-w-full max-h-full">
+                      {/* 🔥 ফিক্সড: max-h থ্রেশহোল্ড সেট করা হয়েছে যাতে ভার্টিক্যাল প্লেয়ার স্ক্রিন ভেঙে নিচে না যায় */}
                       <video
                         ref={videoRef}
                         src={previewFile.url}
                         controls
-                        className={`max-w-full bg-black shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded border border-white/5 transition-all duration-500 ease-in-out ${aspectClass} ${objectFitClass}`}
+                        className={`max-w-full max-h-[60vh] lg:max-h-[68vh] object-contain bg-black shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded border border-white/5 transition-all duration-500 ease-in-out ${aspectClass} ${objectFitClass}`}
                       />
                       
                       <div className="flex items-center gap-4 bg-[#121217] border border-white/10 px-4 py-2 rounded-full shadow-xl text-xs select-none">
@@ -962,10 +957,11 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   ) : (
+                    /* 🔥 ফিক্সড: ইমেজের ক্ষেত্রেও হাইট থ্রেশহোল্ড লক করা হয়েছে */
                     <img
                       src={previewFile.url}
                       alt="Preview"
-                      className={`max-w-full max-h-full bg-black shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded border border-white/5 transition-all duration-500 ease-in-out ${aspectClass} ${objectFitClass}`}
+                      className={`max-w-full max-h-[60vh] lg:max-h-[68vh] object-contain bg-black shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded border border-white/5 transition-all duration-500 ease-in-out ${aspectClass} ${objectFitClass}`}
                     />
                   )}
                 </div>
@@ -990,7 +986,6 @@ export default function DashboardPage() {
                           key={comment.id} 
                           className="flex items-center justify-between p-2 my-2 bg-zinc-900/60 rounded border border-zinc-800/50 group"
                         >
-                          {/* কমেন্ট টেক্সট এরিয়া */}
                           <div className="text-sm">
                             <button
                               onClick={() => jumpToTime(comment.time_stamp)}
@@ -1002,10 +997,7 @@ export default function DashboardPage() {
                             <span className="text-zinc-200">{comment.comment_text}</span>
                           </div>
 
-                          {/* অ্যাকশন বাটনস (Edit এবং Delete) */}
                           <div className="flex items-center space-x-1 md:opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                            
-                            {/* 🔥 নতুন: এডিট বাটন (পেন্সিল আইকন) */}
                             <button
                               onClick={() => handleEditComment(comment.id, comment.comment_text)}
                               className="text-zinc-500 hover:text-[#d4af37] p-1 rounded transition-colors duration-150"
@@ -1016,7 +1008,6 @@ export default function DashboardPage() {
                               </svg>
                             </button>
 
-                            {/* আপনার আগের ডিলিট বাটন */}
                             <button
                               onClick={() => handleDeleteComment(comment.id)}
                               className="text-zinc-500 hover:text-red-500 p-1 rounded transition-colors duration-150"
@@ -1032,7 +1023,8 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  <div className="shrink-0 bg-[#121217] border-t border-white/5">
+                  {/* 🔥 ফিক্সড: pb-24 যোগ করা হয়েছে যাতে কমেন্ট বক্স ও বাটন চ্যাটবটের উপরে থাকে এবং চ্যাটবট দিয়ে ঢাকা না পড়ে */}
+                  <div className="shrink-0 bg-[#121217] border-t border-white/5 pb-24">
                     <form onSubmit={handleAddComment} className="p-4">
                       <textarea
                         value={newComment}
@@ -1079,4 +1071,4 @@ export default function DashboardPage() {
       </div>
     </main>
   );
-} 
+}
