@@ -1,5 +1,5 @@
 "use client";
-
+import React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -40,7 +40,7 @@ const AppearanceMenu = ({
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="14"
-                  height="14"
+              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -165,6 +165,10 @@ export default function DashboardPage() {
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // Notification States
+  const [isNotifying, setIsNotifying] = useState(false);
+  const [notificationSent, setNotificationSent] = useState(false);
 
   const router = useRouter();
   const supabase = createClient();
@@ -433,8 +437,13 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!newComment.trim() || !previewFile || !videoRef.current || !user)
       return;
+
+    const commentTextToSend = newComment.trim();
+    setNewComment(""); 
+    
     const currentTime = videoRef.current.currentTime;
     videoRef.current.pause();
+
     const { data, error } = await supabase
       .from("video_comments")
       .insert([
@@ -442,15 +451,43 @@ export default function DashboardPage() {
           file_name: previewFile.name,
           user_id: user.id,
           time_stamp: currentTime,
-          comment_text: newComment.trim(),
+          comment_text: commentTextToSend, 
         },
       ])
       .select();
-    if (!error && data) {
+
+    if (!error && data && data.length > 0) {
       setComments((prev) =>
         [...prev, data[0]].sort((a, b) => a.time_stamp - b.time_stamp),
       );
-      setNewComment("");
+    } else if (error) {
+      console.error("Supabase insert error:", error);
+    }
+  };
+
+  const handleNotifyTeam = async () => {
+    if (!previewFile || !user || comments.length === 0 || isNotifying) return;
+    
+    setIsNotifying(true);
+    try {
+      const cleanFileName = previewFile.name.substring(previewFile.name.indexOf("_") + 1);
+      const res = await fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: cleanFileName,
+          totalComments: comments.length,
+          userEmail: user.email,
+        }),
+      });
+      if (res.ok) {
+        setNotificationSent(true);
+        setTimeout(() => setNotificationSent(false), 5000);
+      }
+    } catch (err) {
+      console.error("Failed to notify team:", err);
+    } finally {
+      setIsNotifying(false);
     }
   };
 
@@ -940,21 +977,45 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  <form onSubmit={handleAddComment} className="p-4 bg-[#121217] border-t border-white/5 shrink-0">
-                    <textarea
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Leave a comment..."
-                      rows={2}
-                      className="w-full bg-[#050505] border border-white/10 rounded-md p-3 text-xs text-white outline-none focus:border-[#d4af37] resize-none mb-3 placeholder-gray-600"
-                    />
-                    <button
-                      type="submit"
-                      className="w-full bg-[#d4af37] hover:bg-[#b8952b] text-black py-2.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-colors shadow-md"
-                    >
-                      Post Comment
-                    </button>
-                  </form>
+                  <div className="shrink-0 bg-[#121217] border-t border-white/5">
+                    <form onSubmit={handleAddComment} className="p-4">
+                      <textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Leave a comment..."
+                        rows={2}
+                        className="w-full bg-[#050505] border border-white/10 rounded-md p-3 text-xs text-white outline-none focus:border-[#d4af37] resize-none mb-3 placeholder-gray-600"
+                      />
+                      <button
+                        type="submit"
+                        className="w-full bg-[#d4af37] hover:bg-[#b8952b] text-black py-2.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-colors shadow-md"
+                      >
+                        Post Comment
+                      </button>
+                    </form>
+
+                    {/* Notify Team UI Section */}
+                    {comments.length > 0 && (
+                      <div className="px-4 pb-4">
+                        <div className="p-3 border border-white/5 bg-[#1c1c24] rounded-lg">
+                          <p className="text-[10px] text-gray-400 mb-2 leading-tight">
+                            সব কমেন্ট করা শেষ হলে টিমকে একসাথে অ্যালার্ট পাঠান:
+                          </p>
+                          <button
+                            onClick={handleNotifyTeam}
+                            disabled={isNotifying}
+                            className={`w-full py-2.5 px-4 rounded text-[10px] font-bold uppercase tracking-widest transition-all duration-200 shadow-md ${
+                              notificationSent
+                                ? "bg-green-600 text-white"
+                                : "bg-[#121217] border border-[#d4af37] hover:bg-[#d4af37] text-[#d4af37] hover:text-black disabled:opacity-50"
+                            }`}
+                          >
+                            {isNotifying ? "Sending..." : notificationSent ? "✓ Team Notified!" : `Notify Team (${comments.length} Notes)`}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </aside>
               )}
             </div>
