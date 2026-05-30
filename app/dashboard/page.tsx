@@ -3,7 +3,7 @@ import React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { confirmDelete } from "../../utils/confirmDelete";
+import { confirmDelete } from "@/utils/confirmDelete";
 
 // --- APPEARANCE MENU COMPONENT (Kachna Media Theme) ---
 const AppearanceMenu = ({
@@ -261,7 +261,6 @@ export default function DashboardPage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!videoRef.current || !previewFile?.isVideo) return;
 
-      // Ignore shortcuts if the user is typing inside inputs or textareas
       if (
         document.activeElement?.tagName === "INPUT" ||
         document.activeElement?.tagName === "TEXTAREA"
@@ -270,15 +269,12 @@ export default function DashboardPage() {
       }
 
       if (e.key === ",") {
-        // Less than sign / comma key: Backward 1 frame (~0.04s at 24fps)
         e.preventDefault();
         videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 0.04);
       } else if (e.key === ".") {
-        // Greater than sign / period key: Forward 1 frame (~0.04s at 24fps)
         e.preventDefault();
         videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 0.04);
       } else if (e.key === " ") {
-        // Spacebar: Toggle Play/Pause
         e.preventDefault();
         if (videoRef.current.paused) videoRef.current.play();
         else videoRef.current.pause();
@@ -288,7 +284,6 @@ export default function DashboardPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [previewFile]);
-  // ------------------------------------------------
 
   // --- RESIZER LOGIC ---
   const handleMouseMoveLeft = useCallback((e: MouseEvent) => {
@@ -386,7 +381,6 @@ export default function DashboardPage() {
     }
   };
 
-  // ASSET MANAGEMENT CRUD FUNCTIONS (Delete & Rename)
   const handleDeleteFile = async (fileName: string) => {
     if (!window.confirm("Are you sure you want to delete this file permanently?")) return;
     const filePath = getFilePath(fileName);
@@ -466,6 +460,19 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirmDelete("comment")) return;
+    setComments((prev) => prev.filter((comment) => comment.id !== commentId));
+    const { error } = await supabase
+      .from("video_comments")
+      .delete()
+      .eq("id", commentId);
+
+    if (error) {
+      console.error("Failed to delete comment from database:", error);
+    }
+  };
+
   const handleNotifyTeam = async () => {
     if (!previewFile || !user || comments.length === 0 || isNotifying) return;
     
@@ -492,16 +499,6 @@ export default function DashboardPage() {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60)
-      .toString()
-      .padStart(2, "0");
-    const s = Math.floor(seconds % 60)
-      .toString()
-      .padStart(2, "0");
-    return `${m}:${s}`;
-  };
-
   const jumpToTime = (time: number) => {
     if (videoRef.current) {
       videoRef.current.currentTime = time;
@@ -509,12 +506,10 @@ export default function DashboardPage() {
     }
   };
 
-  // --- Visuals & Variables ---
   const folders = vaultItems.filter((item) => !item.metadata);
   const files = vaultItems.filter((item) => item.metadata);
   const pathParts = currentFolder ? currentFolder.split("/") : [];
 
-  // FILTER AND SEARCH MATHEMATICS
   const filteredFiles = files.filter((item) => {
     const originalName = item.name.substring(item.name.indexOf("_") + 1).toLowerCase();
     const matchesSearch = originalName.includes(searchQuery.toLowerCase());
@@ -868,7 +863,6 @@ export default function DashboardPage() {
                 <div className="flex-1 w-full h-full flex items-center justify-center p-4 lg:p-10 overflow-hidden">
                   {previewFile.isVideo ? (
                     <div className="flex flex-col items-center gap-4 max-w-full max-h-full">
-                      {/* 🛠️ UPGRADED: WRAPPER FOR VIDEO AND ADVANCED PLAYER CONTROLS */}
                       <video
                         ref={videoRef}
                         src={previewFile.url}
@@ -876,9 +870,7 @@ export default function DashboardPage() {
                         className={`max-w-full bg-black shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded border border-white/5 transition-all duration-500 ease-in-out ${aspectClass} ${objectFitClass}`}
                       />
                       
-                      {/* ADVANCED MEDIA CONTROL BAR */}
                       <div className="flex items-center gap-4 bg-[#121217] border border-white/10 px-4 py-2 rounded-full shadow-xl text-xs select-none">
-                        {/* Playback Speed Controller */}
                         <div className="flex items-center gap-2">
                           <span className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold">Speed:</span>
                           <select
@@ -898,7 +890,6 @@ export default function DashboardPage() {
 
                         <div className="w-px h-4 bg-white/10"></div>
 
-                        {/* Frame-by-Frame Seek Controls */}
                         <div className="flex items-center gap-1.5">
                           <span className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold mr-1">Frame:</span>
                           <button
@@ -919,7 +910,6 @@ export default function DashboardPage() {
 
                         <div className="w-px h-4 bg-white/10"></div>
 
-                        {/* Quick Seek Jumps */}
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 5); }}
@@ -962,17 +952,31 @@ export default function DashboardPage() {
                         No feedback yet.
                       </div>
                     ) : (
-                      comments.map((c) => (
-                        <div key={c.id} className="bg-[#1c1c24] rounded-lg p-3 shadow-sm border border-white/5">
+                      comments.map((comment) => (
+                        <div 
+                          key={comment.id} 
+                          className="flex items-center justify-between p-2 my-2 bg-zinc-900/60 rounded border border-zinc-800/50 group"
+                        >
+                          <div className="text-sm">
+                            <button
+                              onClick={() => jumpToTime(comment.time_stamp)}
+                              className="text-[#d4af37] font-mono mr-2 hover:underline focus:outline-none"
+                              title="Jump to time"
+                            >
+                              {Math.floor(comment.time_stamp / 60)}:{( "0" + Math.floor(comment.time_stamp % 60) ).slice(-2)}
+                            </button>
+                            <span className="text-zinc-200">{comment.comment_text}</span>
+                          </div>
+                      
                           <button
-                            onClick={() => jumpToTime(c.time_stamp)}
-                            className="bg-[#d4af37]/20 text-[#d4af37] px-2 py-1 rounded text-[10px] font-mono hover:bg-[#d4af37]/30 transition-colors font-medium"
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="text-zinc-500 hover:text-red-500 p-1 rounded transition-colors duration-150 md:opacity-0 group-hover:opacity-100"
+                            title="Delete feedback"
                           >
-                            {formatTime(c.time_stamp)}
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                           </button>
-                          <p className="text-xs text-gray-300 mt-2 leading-relaxed">
-                            {c.comment_text}
-                          </p>
                         </div>
                       ))
                     )}
