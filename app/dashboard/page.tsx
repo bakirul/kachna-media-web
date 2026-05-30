@@ -3,6 +3,7 @@ import React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { confirmDelete } from "../../utils/confirmDelete";
 
 // --- APPEARANCE MENU COMPONENT (Kachna Media Theme) ---
 const AppearanceMenu = ({
