@@ -1,0 +1,270 @@
+"use client";
+
+import React, { useState, useRef } from "react";
+
+interface Message {
+  id: string;
+  sender: "user" | "ai";
+  text: string;
+  image?: string | null;
+}
+
+export default function ChatbotWidget() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [selectedLang, setSelectedLang] = useState("en");
+  
+  // ⚡ কোর চ্যাট স্টেটস
+  const [inputText, setInputText] = useState("");
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isRecording, setIsRecording] = useState(false); // ভয়েস রেকর্ডিং স্টেট
+  
+  // ডেমো চ্যাট বাবল দেখার জন্য ইনিশিয়াল মেসেজ
+  const [messages, setMessages] = useState<Message[]>([
+    { id: "1", sender: "ai", text: "Hello! I am your Kachna AI assistant. How can I help you with your video review today?" }
+  ]);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const quickEmojis = ["😀", "😂", "😍", "👍", "🔥", "🚀", "🎉", "❤️", "🙏", "✨"];
+  
+  // জেমিনাই স্টাইল কুইক সাজেশনস
+  const suggestions = [
+    "💡 How to leave a timestamped comment?",
+    "📁 Can I upload multiple video versions?",
+    "🔒 Is my video private?",
+  ];
+
+  // মেসেজ সেন্ড করার হ্যান্ডলার (UI টেস্ট করার জন্য)
+  const handleSendMessage = (textToSend = inputText) => {
+    if (!textToSend.trim() && !attachedImage) return;
+
+    const newUserMessage: Message = {
+      id: Date.now().toString(),
+      sender: "user",
+      text: textToSend,
+      image: attachedImage,
+    };
+
+    setMessages((prev) => [...prev, newUserMessage]);
+    setInputText("");
+    setAttachedImage(null);
+
+    // AI রেসপন্সের একটি ডেমো অ্যাকশন (২ সেকেন্ড পর)
+    setTimeout(() => {
+      setMessages((prev) => [
+        ...prev,
+        { id: (Date.now() + 1).toString(), sender: "ai", text: "Got it! I am processing your request regarding the video pipeline..." }
+      ]);
+    }, 1000);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setAttachedImage(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearChat = () => {
+    if(confirm("Clear current conversation?")) {
+      setMessages([{ id: "1", sender: "ai", text: "Hello! Fresh start. How can I help you now?" }]);
+    }
+  };
+
+  const getWindowClassName = () => {
+    if (isFullScreen) return "fixed inset-4 z-50 flex flex-col bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl transition-all duration-300";
+    if (isMinimized) return "fixed bottom-6 right-6 w-72 z-50 flex flex-col bg-zinc-950 border border-zinc-800 rounded-t-xl shadow-2xl transition-all duration-300";
+    return "fixed bottom-6 right-6 w-[450px] h-[650px] max-h-[85vh] z-50 flex flex-col bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl transition-all duration-300";
+  };
+
+  return (
+    <>
+      {/* 🔘 ১. ফ্লোটিং চ্যাট ট্রিগার বাটন */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 p-4 bg-zinc-900 border border-zinc-800 hover:border-[#d4af37]/50 text-[#d4af37] rounded-full shadow-lg hover:shadow-[#d4af37]/10 transition-all duration-300 group z-50"
+        >
+          <div className="flex items-center space-x-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+            <span className="text-sm font-medium text-zinc-300 max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 ease-in-out whitespace-nowrap">
+              Chat with AI
+            </span>
+          </div>
+        </button>
+      )}
+
+      {/* 💻 ২. মেইন চ্যাট উইন্ডো */}
+      {isOpen && (
+        <div className={getWindowClassName()}>
+          
+          {/* 🔝 হেডার এরিয়া */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-900 bg-zinc-900/40 rounded-t-xl">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#d4af37] shadow-[0_0_8px_#d4af37]" />
+              <span className="text-sm font-medium text-zinc-200">Kachna AI</span>
+              
+              <select
+                value={selectedLang}
+                onChange={(e) => setSelectedLang(e.target.value)}
+                className="bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 rounded px-1.5 py-0.5 focus:outline-none"
+              >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+                <option value="es">Español</option>
+              </select>
+            </div>
+
+            {/* হেডার অ্যাকশন কন্ট্রোলস */}
+            <div className="flex items-center space-x-2 text-zinc-500">
+              {/* ক্লিয়ার চ্যাট বাটন */}
+              {!isMinimized && (
+                <button onClick={clearChat} className="hover:text-zinc-300 p-1 text-xs" title="Clear conversation">
+                  🔄
+                </button>
+              )}
+              <button onClick={() => setIsMinimized(!isMinimized)} className="hover:text-zinc-200 p-1">
+                {isMinimized ? "🔳" : "➖"}
+              </button>
+              {!isMinimized && (
+                <button onClick={() => setIsFullScreen(!isFullScreen)} className="hover:text-zinc-200 p-1 text-xs">
+                  {isFullScreen ? "🗗" : "🗖"}
+                </button>
+              )}
+              <button onClick={() => { setIsOpen(false); setIsFullScreen(false); setIsMinimized(false); }} className="hover:text-red-400 p-1 font-bold text-xs">
+                ❌
+              </button>
+            </div>
+          </div>
+
+          {/* 💬 মেসেজ বডি (রিয়েলটাইম স্ক্রোলিং এবং প্রিমিয়াম স্পেসিং) */}
+          {!isMinimized && (
+            <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-zinc-950/20 custom-scrollbar">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] p-3 rounded-xl text-sm border ${
+                    msg.sender === "user" 
+                      ? "bg-zinc-900 border-zinc-800 text-zinc-200 rounded-tr-none" 
+                      : "bg-[#d4af37]/5 border-[#d4af37]/10 text-zinc-300 rounded-tl-none"
+                  }`}>
+                    {msg.image && (
+                      <img src={msg.image} alt="Sent file" className="w-40 h-auto rounded-lg mb-2 border border-zinc-800" />
+                    )}
+                    <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 🎙️ ইনপুট এবং অ্যাকশন প্যানেল */}
+          {!isMinimized && (
+            <div className="p-4 border-t border-zinc-900 bg-zinc-950 rounded-b-xl">
+              
+              {/* 💡 জেমিনাই স্টাইল কুইক সাজেশনস (যখন কোনো মেসেজ বেশি থাকে না) */}
+              {messages.length <= 1 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {suggestions.map((sug, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSendMessage(sug.substring(2))}
+                      className="text-xs bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:text-[#d4af37] hover:border-[#d4af37]/30 px-3 py-1.5 rounded-full transition-all"
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 😊 ইমোজি পিকার পপওভার */}
+              {showEmojiPicker && (
+                <div className="absolute bottom-24 left-4 bg-zinc-900 border border-zinc-800 p-2 rounded-lg shadow-xl grid grid-cols-5 gap-1.5 z-50">
+                  {quickEmojis.map((emoji) => (
+                    <button key={emoji} onClick={() => { setInputText(prev => prev + emoji); setShowEmojiPicker(false); }} className="hover:bg-zinc-800 p-1 rounded text-lg transition-colors">
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 🖼️ ইমেজ প্রিভিউ বক্স */}
+              {attachedImage && (
+                <div className="mb-3 relative inline-block">
+                  <img src={attachedImage} alt="Preview" className="w-14 h-14 object-cover rounded-lg border border-zinc-800" />
+                  <button onClick={() => setAttachedImage(null)} className="absolute -top-1.5 -right-1.5 bg-zinc-900 text-zinc-400 hover:text-red-400 w-4 h-4 rounded-full text-[10px] border border-zinc-800 flex items-center justify-center">✕</button>
+                </div>
+              )}
+
+              <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
+
+              {/* মেইন ইনপুট কন্টেইনার */}
+              <div className="flex items-end bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 focus-within:border-[#d4af37]/40 transition-colors">
+                
+                {/* অ্যাকশন বাটন গ্রুপ (আইকনস) */}
+                <div className="flex items-center space-x-1 pb-1">
+                  <button onClick={() => fileInputRef.current?.click()} className="text-zinc-500 hover:text-[#d4af37] p-1 transition-colors" title="Upload Image">
+                    📁
+                  </button>
+                  <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-zinc-500 hover:text-[#d4af37] p-1 transition-colors" title="Choose Emoji">
+                    😊
+                  </button>
+                </div>
+
+                {/* 📝 স্মার্ট অটো-রিসাইজিং টেক্সট এরিয়া */}
+                <textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  placeholder={isRecording ? "Listening active..." : "Ask kachna AI... (Shift+Enter for new line)"}
+                  disabled={isRecording}
+                  rows={1}
+                  className="w-full bg-transparent text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none px-2 resize-none max-h-32 py-1 scrollbar-none"
+                />
+
+                {/* 🎙️ ৫. একটিভ লাইভ ভয়েস রেকর্ড বাটন অ্যানিমেশনসহ */}
+                <button 
+                  onClick={() => setIsRecording(!isRecording)} 
+                  className={`p-1.5 rounded-full transition-all relative pb-1 ${
+                    isRecording 
+                      ? "text-red-500 bg-red-500/10 animate-pulse scale-110" 
+                      : "text-zinc-500 hover:text-[#d4af37]"
+                  }`} 
+                  title={isRecording ? "Stop Recording" : "Record Audio"}
+                >
+                  {isRecording ? (
+                    <div className="flex items-center justify-center w-5 h-5">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping"></span>
+                      🛑
+                    </div>
+                  ) : "🎤"}
+                </button>
+
+                {/* 🚀 সেন্ড বাটন */}
+                <button 
+                  onClick={() => handleSendMessage()}
+                  className="text-[#d4af37] hover:text-[#d4af37]/80 p-1.5 transition-colors pb-1" 
+                  title="Send Message"
+                >
+                  🚀
+                </button>
+
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
+    </>
+  );
+}

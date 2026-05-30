@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Manrope, Playfair_Display, JetBrains_Mono } from "next/font/google";
-import { GoogleAnalytics } from "@next/third-parties/google"; // Analytics import
-import "./globals.css"; // নিশ্চিত করুন এই ফাইলটি app ফোল্ডারে আছে
+import { GoogleAnalytics } from "@next/third-parties/google"; // Analytics Import
+import "./globals.css"; // Global CSS
+import ChatbotWidget from "@/components/ChatbotWidget"; // Chatbot Widget
 
 // 1. Font Configurations
 const manrope = Manrope({
@@ -32,6 +33,7 @@ export const metadata: Metadata = {
   },
 };
 
+// 3. Main Root Layout
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -42,9 +44,14 @@ export default function RootLayout({
       <body
         className={`${manrope.variable} ${playfair.variable} ${jetbrainsMono.variable} antialiased`}
       >
+        {/* আপনার ওয়েবসাইটের মূল কন্টেন্ট */}
         {children}
-        {/* Google Analytics - আইডিটি বসান */}
+        
+        {/* Google Analytics */}
         <GoogleAnalytics gaId="G-8F29XVWGML" />
+
+        {/* 🔥 আমাদের গ্লোবাল প্রিমিয়াম AI চ্যাটবট */}
+        <ChatbotWidget />
       </body>
     </html>
   );
