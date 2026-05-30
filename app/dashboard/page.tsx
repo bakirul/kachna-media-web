@@ -999,7 +999,7 @@ export default function DashboardPage() {
                       <div className="px-4 pb-4">
                         <div className="p-3 border border-white/5 bg-[#1c1c24] rounded-lg">
                           <p className="text-[10px] text-gray-400 mb-2 leading-tight">
-                            সব কমেন্ট করা শেষ হলে টিমকে একসাথে অ্যালার্ট পাঠান:
+                          Once you have finished adding all comments, send a single summary alert to the team:
                           </p>
                           <button
                             onClick={handleNotifyTeam}
