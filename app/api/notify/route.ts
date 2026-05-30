@@ -6,18 +6,17 @@ import { z } from "zod";
 
 // ফাইল আপলোডের ইনপুট ডেটা ভ্যালিডেশন
 const uploadSchema = z.object({
-  clientEmail: z.string().email("Invalid client email address"),
   folderName: z.string().nullable().optional(),
   fileCount: z.union([z.string(), z.number()]),
 });
 
-// 🔥 নতুন: সম্পূর্ণ রিভিউ সেশনের সামারি ভ্যালিডেশন
+// সম্পূর্ণ রিভিউ সেশনের সামারি ভ্যালিডেশন
 const reviewSchema = z.object({
   fileName: z.string().min(1, "File name is required"),
   totalComments: z.number(),
-  userEmail: z.string().email("Invalid user email address"),
 });
 
+// HTML Injection / XSS Protection Utility
 function escapeHtml(text: string | number | undefined | null): string {
   if (text === undefined || text === null) return "";
   return String(text)
@@ -49,8 +48,9 @@ export async function POST(request: Request) {
       },
     });
 
+    // 🔒 ১. কঠোর সার্ভার-সাইড অথেন্টিকেশন চেক (সরাসরি সুপাবেস কোর থেকে)
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (authError || !user || !user.email) {
       return NextResponse.json({ error: "Unauthorized access detected" }, { status: 401 });
     }
 
@@ -59,20 +59,22 @@ export async function POST(request: Request) {
     // চেক করা হচ্ছে এটি রিভিউ কমপ্লিট নোটিফিকেশন কি না
     const isReviewComplete = "totalComments" in jsonBody;
 
+    // ক্লায়েন্টের আসল ইমেইলটি সরাসরি সুপাবেস সেশন থেকে নিচ্ছি (Email Spoofing প্রটেকশন)
+    const safeUserEmail = escapeHtml(user.email);
+
     if (isReviewComplete) {
       // ==========================================
       //  A. সম্পূর্ণ রিভিউ সেশনের সামারি নোটিফিকেশন
       // ==========================================
       const parsedBody = reviewSchema.safeParse(jsonBody);
       if (!parsedBody.success) {
-        return NextResponse.json({ error: "Invalid review data" }, { status: 400 });
+        return NextResponse.json({ error: "Invalid review data format" }, { status: 400 });
       }
 
-      const { fileName, totalComments, userEmail } = parsedBody.data;
+      const { fileName, totalComments } = parsedBody.data;
       const safeFileName = escapeHtml(fileName);
-      const safeUserEmail = escapeHtml(userEmail);
 
-      // ১. ডিসকর্ড সামারি অ্যালার্ট
+      // ১. ডিসকোর্ড সামারি অ্যালার্ট
       const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
       if (DISCORD_WEBHOOK_URL) {
         try {
@@ -125,16 +127,19 @@ export async function POST(request: Request) {
 
     } else {
       // ==========================================
-      //  B. ফাইল আপলোড নোটিফিকেশন (আপনার আগের কোড)
+      //  B. ফাইল আপলোড নোটিফিকেশন
       // ==========================================
-      const apiKey = process.env.RESEND_API_KEY;
-      if (!apiKey) return NextResponse.json({ error: "Email service not configured" }, { status: 503 });
-
       const parsedBody = uploadSchema.safeParse(jsonBody);
-      if (!parsedBody.success) return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
+      if (!parsedBody.success) {
+        return NextResponse.json({ error: "Invalid upload data format" }, { status: 400 });
+      }
 
-      const { clientEmail, folderName, fileCount } = parsedBody.data;
-      const safeEmail = escapeHtml(clientEmail);
+      const apiKey = process.env.RESEND_API_KEY;
+      if (!apiKey) {
+        return NextResponse.json({ error: "Email service not configured" }, { status: 503 });
+      }
+
+      const { folderName, fileCount } = parsedBody.data;
       const safeFolder = folderName ? "/" + escapeHtml(folderName) : "Root Directory";
       const safeFileCount = escapeHtml(fileCount);
 
@@ -146,7 +151,7 @@ export async function POST(request: Request) {
         html: `
           <div style="font-family: Arial, sans-serif; background-color: #111; color: #fff; padding: 20px; border-radius: 8px;">
               <h2 style="color: #d4af37; margin-bottom: 20px;">New Assets Received</h2>
-              <p style="font-size: 14px; margin: 8px 0;"><strong>Client:</strong> ${safeEmail}</p>
+              <p style="font-size: 14px; margin: 8px 0;"><strong>Client:</strong> ${safeUserEmail}</p>
               <p style="font-size: 14px; margin: 8px 0;"><strong>Directory:</strong> ${safeFolder}</p>
               <p style="font-size: 14px; margin: 8px 0;"><strong>Files Transferred:</strong> ${safeFileCount}</p>
               <br/>
