@@ -4,11 +4,26 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
-// Initialize Supabase Admin Client to bypass RLS for server operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+
+// বিল্ড-টাইম ক্র্যাশ এড়াতে এবং রানটাইমে সিকিউর অ্যাডমিন ক্লায়েন্ট পাওয়ার জন্য একটি হেল্পার ফাংশন
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    // বিল্ড ফেস পার করার জন্য একটি নিরাপদ ডামি ক্লায়েন্ট রিটার্ন করবে
+    console.warn(
+      "⚠️ Service role credentials empty during compilation. Utilizing build-safe placeholder client.",
+    );
+    return createClient(
+      supabaseUrl || "https://placeholder-project.supabase.co",
+      supabaseServiceKey || "placeholder-token-for-build-pass",
+    );
+  }
+
+  // রিয়েল রানটাইমে (লাইভ সাইটে) আসল সুরক্ষিত ক্লায়েন্ট রিটার্ন করবে
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,6 +35,9 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+
+    // ফাংশন এক্সিকিউশনের সময় অ্যাডমিন ক্লায়েন্ট কল করা হলো (Complete Build Safety)
+    const supabaseAdmin = getSupabaseAdmin();
 
     // 1. Generate a temporary signed URL to stream the file from Supabase Storage
     const { data: signedUrlData, error: signError } =
