@@ -61,13 +61,13 @@ export default function DashboardPage() {
   // Feature flags
   const { flags } = useFeatureFlags(user?.id);
 
-  // Sidebar Visibility State (Dynamic for both mobile & desktop)
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  // 🚀 FIX: Sidebar Visibility State (Dynamic for both mobile & desktop)
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
-  // Auto-hide sidebar on initial load for mobile, show for desktop
+  // Auto-collapse sidebar on smaller screens initially
   useEffect(() => {
-    if (window.innerWidth >= 1024) {
-      setIsSidebarVisible(true);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsSidebarVisible(false);
     }
   }, []);
 
@@ -417,21 +417,54 @@ export default function DashboardPage() {
         ? 320
         : 200;
 
+  if (loading) {
+    return (
+      <div className="h-screen w-full bg-[#050505] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <main className="h-screen w-full bg-[#050505] text-gray-300 font-sans flex flex-col overflow-hidden relative">
-      {/* 🚀 FIX 1: HOVER NAVBAR (Invisible trigger area at top reveals the navbar on hover) */}
+      {/* 🚀 FIX 1: HOVER NAVBAR (Invisible top zone reveals the navbar smoothly) */}
       <div className="fixed top-0 left-0 w-full z-[100] group h-3 hover:h-auto">
         <div className="absolute top-0 left-0 w-full transform -translate-y-[101%] group-hover:translate-y-0 transition-transform duration-300 ease-out bg-[#050505]/95 backdrop-blur-md border-b border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           <Navbar />
         </div>
       </div>
 
-      <DashboardHeader
-        viewSettings={viewSettings}
-        setViewSettings={setViewSettings}
-        handleUpload={handleUpload}
-        uploading={uploading}
-      />
+      {/* HEADER SECTION WITH SIDEBAR TOGGLE BUTTON */}
+      <div className="shrink-0 flex flex-col w-full">
+        <div className="flex items-center w-full bg-[#0a0a0f] border-b border-white/5 px-4 h-14 gap-3">
+          <button
+            onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+            className="p-1.5 bg-[#121217] border border-white/10 hover:border-[#d4af37] text-gray-400 hover:text-[#d4af37] rounded transition-colors shadow-inner shrink-0"
+            title="Toggle Sidebar"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div className="flex-1 min-w-0">
+            <DashboardHeader
+              viewSettings={viewSettings}
+              setViewSettings={setViewSettings}
+              handleUpload={handleUpload}
+              uploading={uploading}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* LIVE SESSION WIDGET */}
       {flags?.enable_live_session && user && socket && (
@@ -487,7 +520,7 @@ export default function DashboardPage() {
         id="main-workspace-container"
         className="flex flex-1 overflow-hidden relative min-h-0 w-full"
       >
-        {/* 🚀 FIX 3: MOBILE BACKDROP FOR DYNAMIC SIDEBAR */}
+        {/* MOBILE SIDEBAR BACKDROP LAYER */}
         {isSidebarVisible && (
           <div
             className="md:hidden fixed inset-0 bg-black/60 z-[45] backdrop-blur-sm"
@@ -495,68 +528,50 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* 🚀 FIX 3: DYNAMIC SIDEBAR (Slides in/out for both desktop and mobile) */}
-        {isSidebarVisible && (
-          <div className="absolute md:relative z-50 h-full shrink-0 shadow-[20px_0_50px_rgba(0,0,0,0.5)] md:shadow-none bg-[#0a0a0f] border-r border-white/5 animate-in slide-in-from-left-10 duration-200">
-            <VaultSidebar
-              currentFolder={currentFolder}
-              folders={folders}
-              onFolderClick={(folder) => {
-                setCurrentFolder(folder);
-                if (window.innerWidth < 768) setIsSidebarVisible(false); // Auto close on mobile
-              }}
-              onRootClick={() => {
-                setCurrentFolder("");
-                if (window.innerWidth < 768) setIsSidebarVisible(false);
-              }}
-              onCreateFolder={handleCreateFolder}
-              onDeleteFolder={handleDeleteFolder}
-            />
-          </div>
-        )}
+        {/* 🚀 FIX 2: DYNAMIC SIDEBAR (Slides over gracefully on mobile, responsive on desktop) */}
+        <div
+          className={`fixed md:relative z-50 h-full shrink-0 bg-[#0a0a0f] border-r border-white/5 transition-all duration-300 ease-in-out md:translate-x-0 ${
+            isSidebarVisible
+              ? "translate-x-0 w-[260px]"
+              : "-translate-x-full md:w-0 overflow-hidden border-none"
+          }`}
+        >
+          <VaultSidebar
+            currentFolder={currentFolder}
+            folders={folders}
+            onFolderClick={(folder) => {
+              setCurrentFolder(folder);
+              if (window.innerWidth < 768) setIsSidebarVisible(false); // Mobile auto-close
+            }}
+            onRootClick={() => {
+              setCurrentFolder("");
+              if (window.innerWidth < 768) setIsSidebarVisible(false);
+            }}
+            onCreateFolder={handleCreateFolder}
+            onDeleteFolder={handleDeleteFolder}
+          />
+        </div>
 
+        {/* CONTENT & PREVIEW GRID GRID */}
         <div
           id="grid-preview-container"
           className="flex flex-1 overflow-hidden relative min-h-0 min-w-0"
         >
           <section
-            className={`flex flex-col bg-[#050505] shrink-0 h-full relative transition-none custom-scrollbar ${previewFile ? "hidden lg:flex" : "flex"}`}
+            className={`flex flex-col bg-[#050505] shrink-0 h-full relative transition-none ${previewFile ? "hidden lg:flex" : "flex"}`}
             style={{ width: previewFile ? `${leftPaneWidth}%` : "100%" }}
           >
-            {/* 🚀 GRID HEADER WITH SIDEBAR TOGGLE */}
-            <div className="h-14 flex flex-row items-center justify-between px-3 md:px-6 border-b border-white/5 bg-[#121217] shrink-0 z-20 relative gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <button
-                  onClick={() => setIsSidebarVisible(!isSidebarVisible)}
-                  className="shrink-0 p-1.5 bg-[#050505] border border-white/10 hover:border-[#d4af37] text-gray-400 hover:text-[#d4af37] rounded transition-colors shadow-inner"
-                  title="Toggle Directory Sidebar"
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <line x1="3" y1="12" x2="21" y2="12"></line>
-                    <line x1="3" y1="6" x2="21" y2="6"></line>
-                    <line x1="3" y1="18" x2="21" y2="18"></line>
-                  </svg>
-                </button>
-                <h2 className="text-sm font-medium text-gray-200 truncate">
-                  {currentFolder
-                    ? currentFolder.split("/").pop()
-                    : "All Assets"}
-                </h2>
-              </div>
+            <div className="h-14 flex flex-row items-center justify-between px-6 border-b border-white/5 bg-[#121217] shrink-0 z-20">
+              <h2 className="text-sm font-medium text-gray-200 truncate">
+                {currentFolder ? currentFolder.split("/").pop() : "All Assets"}
+              </h2>
               <div className="shrink-0">
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search files..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-[#050505] border border-white/10 rounded-md px-3 py-1.5 text-xs text-white w-[120px] md:w-[200px]"
+                  className="bg-[#050505] border border-white/10 rounded-md px-3 py-1.5 text-xs text-white w-[200px] outline-none focus:border-[#d4af37]/50"
                 />
               </div>
             </div>
@@ -572,19 +587,19 @@ export default function DashboardPage() {
                   const originalName = item.name.substring(
                     item.name.indexOf("_") + 1,
                   );
-                  const isVideoFile = item.name.match(
-                    /\.(mp4|webm|ogg|mov|mxf)$/i,
-                  );
-                  const isImage = item.name.match(
-                    /\.(jpg|jpeg|png|gif|webp)$/i,
-                  );
+                  const isVideoFile =
+                    item.name.match(/\.(mp4|webm|ogg|mov|mxf)$/i) !== null;
+                  const isImage =
+                    item.name.match(/\.(jpg|jpeg|png|gif|webp)$/i) !== null;
                   const isSelected = previewFile?.name === item.name;
                   const fileUrl = fileUrls[item.name];
 
                   return (
                     <div
                       key={item.id}
-                      className={`bg-[#121217] rounded-lg border overflow-hidden relative group cursor-pointer ${isSelected ? "border-[#d4af37]" : "border-white/5"}`}
+                      className={`bg-[#121217] rounded-lg border overflow-hidden relative group cursor-pointer ${
+                        isSelected ? "border-[#d4af37]" : "border-white/5"
+                      }`}
                       onClick={() => handlePreview(item.name)}
                     >
                       <div
@@ -671,10 +686,10 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* 🚀 FIX 2: PREVIEW AREA - STRICT FLEX RULES TO PREVENT OVERFLOW */}
+          {/* PREVIEW WORKSPACE - RESTRAINED TO STAY IN VIEWPORT */}
           {previewFile && (
             <div className="flex flex-1 flex-col h-full bg-[#0a0a0f] overflow-hidden relative min-w-0 min-h-0">
-              {/* Toolbar */}
+              {/* VIDEO TOPBAR TOOLBAR */}
               {previewFile.isVideo && (
                 <div className="w-full bg-[#1c1c24] border-b border-[#d4af37]/20 p-2 lg:p-3 flex flex-col lg:flex-row flex-wrap items-start lg:items-center justify-between z-30 shrink-0 shadow-md gap-3 min-h-0">
                   <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0">
@@ -730,8 +745,44 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0 shrink-0">
-                    {/* ... Tool buttons (Compare, Lock, Report, Send) ... */}
+
+                  <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0 shrink-0 justify-end">
+                    {flags?.enable_compare_mode && allVideoFiles.length > 1 && (
+                      <div className="flex items-center gap-1.5 bg-[#121217] px-2 py-1 rounded border border-white/5 shrink-0">
+                        <span className="text-[9px] text-gray-400 uppercase tracking-widest">
+                          Compare:
+                        </span>
+                        <select
+                          onChange={handleSelectCompare}
+                          className="bg-black text-white text-[10px] px-1.5 py-0.5 rounded border border-white/10 outline-none max-w-[100px] truncate"
+                        >
+                          <option value="">None</option>
+                          {allVideoFiles
+                            .filter((f) => f.name !== previewFile.name)
+                            .map((f) => (
+                              <option key={f.id} value={f.name}>
+                                {f.name.substring(f.name.indexOf("_") + 1)}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+                    {isLocked ? (
+                      <div
+                        className="flex items-center gap-1 bg-green-950 border border-green-500/30 text-green-400 px-2 py-1 rounded text-[9px] font-bold tracking-wider shrink-0"
+                        title={`SHA-256: ${integrityHash}`}
+                      >
+                        🔒 LOCKED
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handlePictureLock}
+                        disabled={isLocking}
+                        className="text-[9px] uppercase font-bold tracking-widest bg-red-950 border border-red-500/30 hover:bg-red-900 text-red-400 px-2 py-1.5 rounded transition-colors shrink-0"
+                      >
+                        {isLocking ? "Locking..." : "Picture Lock"}
+                      </button>
+                    )}
                     <button
                       onClick={handleDownloadReport}
                       className="text-[9px] uppercase font-bold tracking-widest bg-[#121217] border border-white/10 hover:border-[#d4af37] text-white px-2 py-1.5 rounded transition-colors shrink-0"
@@ -749,40 +800,62 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Player and Comments Wrapper - Strictly divided to fit 100vh */}
+              {/* MEDIA LAYER AND COMMENTS LAYER SPLIT */}
               <section className="flex-1 w-full flex flex-col lg:flex-row relative min-h-0 min-w-0 overflow-hidden">
-                {/* VIDEO HALF - Takes remaining flex space, never pushes bounds */}
+                {/* VIDEO WRAPPER PANEL */}
                 <div className="flex-1 flex flex-row min-w-0 min-h-0 overflow-hidden shrink-0">
-                  <div className="flex-1 flex flex-col p-2 lg:p-4 relative min-w-0 min-h-0 overflow-hidden">
+                  <div className="flex-1 flex flex-col p-4 relative min-w-0 min-h-0 overflow-hidden">
                     {previewFile.isVideo ? (
                       <>
-                        <div
-                          className={`flex flex-1 w-full h-full justify-center items-center flex-col min-h-0 min-w-0 pb-2`}
-                        >
+                        <div className="flex flex-1 w-full h-full justify-center items-center flex-col min-h-0 min-w-0 pb-4">
                           <div
-                            className={`relative flex flex-col items-center justify-center min-h-0 min-w-0 w-full h-full max-h-full overflow-hidden`}
+                            className={`relative flex flex-col items-center justify-center min-h-0 min-w-0 w-full h-full max-h-full overflow-hidden ${isCompareMode ? "grid grid-cols-2 gap-2" : ""}`}
                           >
-                            <video
-                              ref={videoRef}
-                              src={previewFile.url}
-                              crossOrigin="anonymous"
-                              controls={
-                                !(flags?.enable_compare_mode && isCompareMode)
-                              }
-                              className={`w-full h-full bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-lg border border-white/10 ${objectFitClass}`}
-                            />
+                            <div className="relative w-full h-full max-h-full flex items-center justify-center overflow-hidden">
+                              <video
+                                ref={videoRef}
+                                src={previewFile.url}
+                                crossOrigin="anonymous"
+                                controls={
+                                  !(flags?.enable_compare_mode && isCompareMode)
+                                }
+                                className={`w-full h-full bg-black shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-lg border border-white/10 ${playerSizeClass} ${objectFitClass}`}
+                              />
+                              {isCompareMode && (
+                                <span className="absolute top-2 left-2 bg-black/70 text-[9px] text-[#d4af37] font-bold px-2 py-0.5 rounded border border-white/10 tracking-widest uppercase">
+                                  Active Cut
+                                </span>
+                              )}
+                            </div>
+
+                            {flags?.enable_compare_mode &&
+                              isCompareMode &&
+                              compareFile && (
+                                <div className="relative w-full h-full max-h-full flex items-center justify-center overflow-hidden">
+                                  <video
+                                    ref={compareVideoRef}
+                                    src={compareFile.url}
+                                    crossOrigin="anonymous"
+                                    controls={false}
+                                    className={`w-full h-full bg-black shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-lg border border-white/10 ${playerSizeClass} ${objectFitClass}`}
+                                  />
+                                  <span className="absolute top-2 left-2 bg-black/70 text-[9px] text-gray-400 font-bold px-2 py-0.5 rounded border border-white/10 tracking-widest uppercase">
+                                    Reference
+                                  </span>
+                                </div>
+                              )}
                           </div>
                         </div>
 
-                        {/* Video Controls Area */}
-                        <div className="shrink-0 mx-auto flex flex-wrap justify-center items-center gap-2 sm:gap-4 bg-[#121217] border border-white/10 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-2xl text-xs select-none relative z-20 w-full max-w-2xl mt-auto">
-                          <div className="flex items-center gap-1 sm:gap-2">
+                        {/* VIDEO FRAME CONTROLS */}
+                        <div className="shrink-0 mx-auto flex flex-wrap justify-center items-center gap-4 bg-[#121217] border border-white/10 px-5 py-2.5 rounded-full shadow-2xl text-xs select-none relative z-20 w-full max-w-2xl mt-auto">
+                          <div className="flex items-center gap-2">
                             <button
                               onClick={stepBackward}
                               className="px-2 py-1 bg-[#050505] border border-white/5 hover:border-[#d4af37]/30 text-gray-300 hover:text-[#d4af37] rounded"
                             >
                               <svg
-                                className="w-3 h-3 sm:w-4 sm:h-4"
+                                className="w-4 h-4"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -795,7 +868,7 @@ export default function DashboardPage() {
                                 />
                               </svg>
                             </button>
-                            <div className="font-mono text-[10px] sm:text-[11px] text-[#d4af37] font-medium tracking-widest px-2 py-1 bg-[#050505] rounded border border-white/10">
+                            <div className="font-mono text-[11px] text-[#d4af37] font-medium tracking-widest px-2 py-1 bg-[#050505] rounded border border-white/10">
                               {smpteTimecode}
                             </div>
                             <button
@@ -803,7 +876,7 @@ export default function DashboardPage() {
                               className="px-2 py-1 bg-[#050505] border border-white/5 hover:border-[#d4af37]/30 text-gray-300 hover:text-[#d4af37] rounded"
                             >
                               <svg
-                                className="w-3 h-3 sm:w-4 sm:h-4"
+                                className="w-4 h-4"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -820,7 +893,7 @@ export default function DashboardPage() {
                           <div className="w-px h-4 bg-white/10"></div>
                           <button
                             onClick={handleTogglePlay}
-                            className="px-3 sm:px-4 py-1.5 bg-[#d4af37] text-black font-bold text-[9px] sm:text-[10px] uppercase rounded-full tracking-widest hover:scale-105 transition-transform shadow-md truncate"
+                            className="px-4 py-1.5 bg-[#d4af37] text-black font-bold text-[10px] uppercase rounded-full tracking-widest hover:scale-105 transition-transform shadow-md truncate"
                           >
                             Play / Pause
                           </button>
@@ -836,7 +909,7 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  {/* LUFS Meter */}
+                  {/* REAL-TIME BROADCAST LUFS METER */}
                   {previewFile.isVideo && (
                     <div className="shrink-0 w-16 h-full hidden md:flex flex-col justify-center border-l border-white/5 bg-[#0a0a0f] p-2 z-20">
                       <LUFSMeter lufs={lufs} />
@@ -844,9 +917,9 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* COMMENTS HALF - Shares flex space on mobile, fixed width on desktop */}
+                {/* 🚀 COMMENTS PANEL AREA - RESTRAINED HEIGHT MIN-H-0 TO FIT WITHIN SCREEN */}
                 {previewFile.isVideo && (
-                  <div className="flex-1 lg:flex-none lg:w-[320px] shrink-0 bg-[#121217] border-t lg:border-t-0 lg:border-l border-white/5 z-40 flex flex-col min-h-0 overflow-hidden">
+                  <div className="w-full lg:w-[320px] shrink-0 bg-[#121217] border-t lg:border-t-0 lg:border-l border-white/5 z-40 flex flex-col min-h-0 h-[40vh] lg:h-full overflow-hidden">
                     <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col min-h-0">
                       <CommentsPanel
                         isLive={isLive}
