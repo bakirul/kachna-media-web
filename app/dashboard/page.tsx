@@ -10,6 +10,7 @@ import { useLiveComments } from "@/hooks/useLiveComments";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 // Components
+import Navbar from "@/components/Navbar"; // 🚀 FIX: Global Navbar imported
 import VaultSidebar from "@/components/VaultSidebar";
 import CommentsPanel from "@/components/CommentsPanel";
 import LiveSessionWidget from "@/components/LiveSessionWidget";
@@ -410,7 +411,13 @@ export default function DashboardPage() {
         : 200;
 
   return (
-    <main className="h-screen w-screen bg-[#050505] text-gray-300 font-sans flex flex-col overflow-hidden relative">
+    // 🚀 FIX: Changed w-screen to w-full to prevent horizontal scrolling bugs
+    <main className="h-screen w-full bg-[#050505] text-gray-300 font-sans flex flex-col overflow-hidden relative">
+      {/* 🚀 FIX: Global Navbar inserted at the top. 'shrink-0' ensures it never squishes */}
+      <div className="shrink-0 z-50 w-full border-b border-white/5 bg-[#050505]">
+        <Navbar />
+      </div>
+
       <DashboardHeader
         viewSettings={viewSettings}
         setViewSettings={setViewSettings}
@@ -418,10 +425,9 @@ export default function DashboardPage() {
         uploading={uploading}
       />
 
-      {/* 🚀 FIXED LIVE SESSION CONTAINER (Bottom Left) */}
+      {/* FIXED LIVE SESSION CONTAINER (Bottom Left) */}
       {flags?.enable_live_session && user && socket && (
         <div className="fixed bottom-6 left-6 z-[60] flex flex-col items-start transition-all duration-300">
-          {/* ১. মিনিমাইজড বাটন (যখন উইন্ডো লুকানো থাকবে) */}
           {isLiveMinimized && (
             <button
               onClick={() => setIsLiveMinimized(false)}
@@ -435,10 +441,8 @@ export default function DashboardPage() {
             </button>
           )}
 
-          {/* ২. ফুল উইন্ডো ভিউ (মিনিমাইজ বাটন সহ) */}
           {!isLiveMinimized && (
             <div className="relative w-[350px] shadow-2xl rounded-xl overflow-hidden border border-white/10 bg-[#0a0a0f]">
-              {/* 🚀 ইন্টারনাল মিনিমাইজ বাটন */}
               <button
                 onClick={() => setIsLiveMinimized(true)}
                 className="absolute top-3 right-3 bg-black/60 hover:bg-white/20 text-white rounded p-1.5 transition-colors z-[70] backdrop-blur-md border border-white/10 flex items-center justify-center w-7 h-7"
@@ -459,7 +463,6 @@ export default function DashboardPage() {
                 </svg>
               </button>
 
-              {/* উইজেট কন্টেইনার */}
               <div className="[&>*]:!relative [&>*]:!inset-auto [&>*]:!bottom-auto [&>*]:!left-auto [&>*]:!right-auto [&>*]:!top-auto [&>*]:!m-0">
                 <LiveSessionWidget
                   socket={socket}
@@ -472,9 +475,10 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Main Workspace Container */}
       <div
         id="main-workspace-container"
-        className="flex flex-1 overflow-hidden relative"
+        className="flex flex-1 overflow-hidden relative min-h-0"
       >
         <div
           className={`h-full shrink-0 ${previewFile ? "hidden md:block" : "block"}`}
@@ -627,6 +631,7 @@ export default function DashboardPage() {
             />
           )}
 
+          {/* 🚀 PREVIEW AREA (Responsive Fix Applied Here) */}
           {previewFile && (
             <div className="flex flex-1 flex-col h-full bg-[#0a0a0f] overflow-hidden relative min-w-0">
               {previewFile.isVideo && (
@@ -779,8 +784,8 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <section className="flex-1 w-full h-full flex flex-col lg:flex-row relative overflow-hidden">
-                <div className="flex-1 flex flex-row min-w-0 overflow-hidden">
+              <section className="flex-1 w-full h-full flex flex-col lg:flex-row relative overflow-hidden lg:overflow-visible overflow-y-auto custom-scrollbar">
+                <div className="flex-1 flex flex-row min-w-0 lg:overflow-hidden min-h-[40vh] lg:min-h-0 shrink-0">
                   <div className="flex-1 flex flex-col p-2 lg:p-4 overflow-hidden relative min-w-0">
                     {previewFile.isVideo ? (
                       <>
@@ -947,9 +952,9 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* Comments Panel Area */}
+                {/* 🚀 Comments Panel Area (Responsive Fix) */}
                 {previewFile.isVideo && (
-                  <div className="w-full h-[50vh] lg:h-full lg:w-[320px] shrink-0 bg-[#121217] border-t lg:border-t-0 lg:border-l border-white/5 z-40 flex flex-col overflow-hidden">
+                  <div className="w-full lg:w-[320px] shrink-0 bg-[#121217] border-t lg:border-t-0 lg:border-l border-white/5 z-40 flex flex-col min-h-[500px] lg:min-h-0 lg:h-full">
                     <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
                       <CommentsPanel
                         isLive={isLive}

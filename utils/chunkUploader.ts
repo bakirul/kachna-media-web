@@ -1,103 +1,113 @@
 // utils/chunkUploader.ts
+import * as tus from "tus-js-client";
 
 export interface UploadProgressCallback {
-    (progress: number): void;
+  (progress: number, bytesUploaded: number, bytesTotal: number): void;
+}
+
+export interface UploadConfig {
+  file: File;
+  bucketName: string;
+  filePath: string; // The destination path inside the bucket (e.g., 'userId/folder/fileName.mp4')
+  supabaseUrl: string; // From process.env.NEXT_PUBLIC_SUPABASE_URL
+  supabaseAnonKey: string; // From process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  userAccessToken: string; // The active user session JWT token
+  onProgress: UploadProgressCallback;
+  onSuccess: () => void;
+  onError: (error: Error) => void;
+}
+
+export class ChunkUploader {
+  private upload: tus.Upload | null = null;
+  private config: UploadConfig;
+
+  constructor(config: UploadConfig) {
+    this.config = config;
   }
-  
-  interface UploadConfig {
-    file: File;
-    fileId: string;
-    chunkSize?: number; // Default: 5MB
-    maxConcurrency?: number; // Default: 3
-    maxRetries?: number; // Default: 3
-    onProgress: UploadProgressCallback;
+
+  /**
+   * Starts or resumes the TUS resumable upload process to Supabase Storage.
+   */
+  public startUpload(): void {
+    const {
+      file,
+      bucketName,
+      filePath,
+      supabaseUrl,
+      supabaseAnonKey,
+      userAccessToken,
+      onProgress,
+      onSuccess,
+      onError,
+    } = this.config;
+
+    if (!file) {
+      onError(new Error("No file provided for upload."));
+      return;
+    }
+
+    // Construct the Supabase TUS endpoint
+    // Format: https://<project-id>.supabase.co/storage/v1/upload/resumable
+    const uploadEndpoint = `${supabaseUrl}/storage/v1/upload/resumable`;
+
+    this.upload = new tus.Upload(file, {
+      endpoint: uploadEndpoint,
+      retryDelays: [0, 3000, 5000, 10000, 20000], // Exponential backoff for retries
+      headers: {
+        Authorization: `Bearer ${userAccessToken}`,
+        apikey: supabaseAnonKey,
+      },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true, // Clean up local storage after success
+      metadata: {
+        bucketName: bucketName,
+        objectName: filePath, // The target path inside the bucket
+        contentType: file.type,
+      },
+      chunkSize: 6 * 1024 * 1024, // 6MB chunks (Supabase recommends 6MB minimum for TUS)
+      onError: function (error) {
+        console.error("TUS Upload Error:", error);
+        onError(error);
+      },
+      onProgress: function (bytesUploaded, bytesTotal) {
+        const percentage = Math.round((bytesUploaded / bytesTotal) * 100);
+        onProgress(percentage, bytesUploaded, bytesTotal);
+      },
+      onSuccess: function () {
+        console.log(`[TUS Upload] Success: ${filePath}`);
+        onSuccess();
+      },
+    });
+
+    // Check if there are any previous uncompleted uploads for this file to resume
+    this.upload.findPreviousUploads().then((previousUploads) => {
+      if (previousUploads.length > 0) {
+        console.log("Resuming previous upload...");
+        this.upload?.resumeFromPreviousUpload(previousUploads[0]);
+      } else {
+        console.log("Starting new upload...");
+        this.upload?.start();
+      }
+    });
   }
-  
-  export class ChunkUploader {
-    private file: File;
-    private fileId: string;
-    private chunkSize: number;
-    private maxConcurrency: number;
-    private maxRetries: number;
-    private onProgress: UploadProgressCallback;
-    private totalChunks: number;
-    private uploadedChunks: number = 0;
-  
-    constructor(config: UploadConfig) {
-      this.file = config.file;
-      this.fileId = config.fileId;
-      this.chunkSize = config.chunkSize || 5 * 1024 * 1024; // 5MB exact
-      this.maxConcurrency = config.maxConcurrency || 3;
-      this.maxRetries = config.maxRetries || 3;
-      this.onProgress = config.onProgress;
-      this.totalChunks = Math.ceil(this.file.size / this.chunkSize);
-    }
-  
-    /**
-     * Orchestrates the chunking and concurrent upload process.
-     */
-    public async startUpload(): Promise<void> {
-      if (this.totalChunks === 0) throw new Error("File is empty.");
-  
-      const uploadTasks: (() => Promise<void>)[] = [];
-  
-      for (let index = 0; index < this.totalChunks; index++) {
-        const start = index * this.chunkSize;
-        const end = Math.min(start + this.chunkSize, this.file.size);
-        const chunk = this.file.slice(start, end);
-  
-        uploadTasks.push(() => this.uploadChunkWithRetry(chunk, index));
-      }
-  
-      await this.processConcurrently(uploadTasks, this.maxConcurrency);
-    }
-  
-    /**
-     * Executes tasks concurrently up to the specified limit.
-     */
-    private async processConcurrently(tasks: (() => Promise<void>)[], limit: number) {
-      const executing = new Set<Promise<void>>();
-      for (const task of tasks) {
-        const p = task().finally(() => executing.delete(p));
-        executing.add(p);
-        if (executing.size >= limit) {
-          await Promise.race(executing);
-        }
-      }
-      await Promise.all(executing);
-    }
-  
-    /**
-     * Uploads a single chunk with retry logic.
-     */
-    private async uploadChunkWithRetry(chunk: Blob, index: number, attempt: number = 1): Promise<void> {
-      const formData = new FormData();
-      formData.append("chunk", chunk);
-      formData.append("fileId", this.fileId);
-      formData.append("chunkIndex", index.toString());
-      formData.append("totalChunks", this.totalChunks.toString());
-  
-      try {
-        const response = await fetch("/api/upload-chunk", {
-          method: "POST",
-          body: formData,
-        });
-  
-        if (!response.ok) {
-          throw new Error(`Server returned ${response.status} for chunk ${index}`);
-        }
-  
-        this.uploadedChunks++;
-        const progress = Math.round((this.uploadedChunks / this.totalChunks) * 100);
-        this.onProgress(progress);
-  
-      } catch (error) {
-        if (attempt < this.maxRetries) {
-          console.warn(`Chunk ${index} failed. Retrying (${attempt}/${this.maxRetries})...`);
-          await new Promise((res) => setTimeout(res, 1000 * attempt)); // Exponential backoff
-          return this.uploadChunkWithRetry(chunk, index, attempt + 1);
-        }
-        throw new Error(`Failed to upload chunk ${index} after ${this.maxRetries} attempts.`);
-      }
+
+  /**
+   * Pauses the current upload if it's running.
+   */
+  public pauseUpload(): void {
+    if (this.upload) {
+      this.upload.abort();
+      console.log("Upload paused.");
     }
   }
+
+  /**
+   * Resumes the paused upload.
+   */
+  public resumeUpload(): void {
+    if (this.upload) {
+      this.upload.start();
+      console.log("Upload resumed.");
+    }
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -59,12 +59,12 @@ export default function Navbar() {
         {/* 3. Navigation Links & Buttons */}
         <div
           className={`
-          absolute md:static top-full left-0 w-full md:w-auto
-          bg-bg-body/98 md:bg-transparent border-b border-gold-primary/30 md:border-none
-          flex flex-col md:flex-row items-center gap-0 md:gap-6 lg:gap-8
-          overflow-hidden transition-all duration-500 ease-in-out backdrop-blur-md md:backdrop-blur-none
-          ${isOpen ? "max-h-[500px] py-8 md:py-0 shadow-2xl" : "max-h-0 md:max-h-full py-0"}
-        `}
+            absolute md:static top-full left-0 w-full md:w-auto
+            bg-bg-body/98 md:bg-transparent border-b border-gold-primary/30 md:border-none
+            flex flex-col md:flex-row items-center gap-0 md:gap-6 lg:gap-8
+            overflow-hidden transition-all duration-500 ease-in-out backdrop-blur-md md:backdrop-blur-none
+            ${isOpen ? "max-h-[500px] py-8 md:py-0 shadow-2xl" : "max-h-0 md:max-h-full py-0"}
+          `}
         >
           {navLinks.map((item) => {
             const isActive =

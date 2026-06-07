@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Playfair_Display, JetBrains_Mono } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google"; // Analytics Import
-import "@/app/globals.css";
+import "./globals.css"; // Global CSS
 import ChatbotWidget from "@/components/ChatbotWidget"; // Chatbot Widget
 import GlobalLiveWidget from "@/components/GlobalLiveWidget";
 

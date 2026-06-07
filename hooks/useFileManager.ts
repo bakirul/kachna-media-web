@@ -62,23 +62,61 @@ export const useFileManager = (user: any, currentFolder: string) => {
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0 || !user) return;
     setUploading(true);
-    setUploadProgress(10);
+    setUploadProgress(0);
 
+    // Get the current session for auth
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      alert("Authentication error: No active session found.");
+      setUploading(false);
+      return;
+    }
+
+    // Process multiple files one by one or concurrently
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const targetPath = currentFolder
         ? `${user.id}/${currentFolder}`
         : user.id;
       const filePath = `${targetPath}/${Date.now()}_${file.name}`;
-      await supabase.storage.from("client-vault").upload(filePath, file);
-    }
 
-    setUploadProgress(100);
-    fetchFiles(user.id, currentFolder);
-    setTimeout(() => {
-      setUploading(false);
-      setUploadProgress(0);
-    }, 2000);
+      // Import the TUS uploader dynamically to avoid SSR issues
+      const { ChunkUploader } = await import("@/utils/chunkUploader");
+
+      const uploader = new ChunkUploader({
+        file: file,
+        bucketName: "client-vault", // Your Supabase bucket name
+        filePath: filePath,
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        userAccessToken: session.access_token,
+        onProgress: (percentage, bytesUploaded, bytesTotal) => {
+          // Update UI state with overall progress
+          setUploadProgress(percentage);
+          console.log(
+            `[Upload] ${percentage}% (${bytesUploaded}/${bytesTotal} bytes)`,
+          );
+        },
+        onSuccess: () => {
+          setUploadProgress(100);
+          fetchFiles(user.id, currentFolder); // Refresh file list
+          setTimeout(() => {
+            setUploading(false);
+            setUploadProgress(0);
+          }, 2000);
+        },
+        onError: (error) => {
+          alert(`Upload failed: ${error.message}`);
+          setUploading(false);
+          setUploadProgress(0);
+        },
+      });
+
+      // Start the resilient TUS upload
+      uploader.startUpload();
+    }
   };
 
   const getFilePath = (fileName: string) =>
