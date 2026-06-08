@@ -195,6 +195,9 @@ export default function DashboardHeader({
   uploading,
   isSidebarOpen,
   onToggleSidebar,
+  isEditor,
+  isScreenSharing,
+  onToggleScreenShare,
 }: {
   viewSettings: any;
   setViewSettings: React.Dispatch<React.SetStateAction<any>>;
@@ -202,6 +205,9 @@ export default function DashboardHeader({
   uploading: boolean;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  isEditor?: boolean;
+  isScreenSharing?: boolean;
+  onToggleScreenShare?: () => void;
 }) {
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -277,6 +283,23 @@ export default function DashboardHeader({
             </svg>
             <span className="hidden sm:inline">Appearance</span>
           </button>
+
+          {isEditor && onToggleScreenShare && (
+            <button
+              onClick={onToggleScreenShare}
+              className={`text-[11px] uppercase tracking-widest px-4 py-2.5 font-bold border transition-all flex items-center gap-2 rounded-md shadow-md ${
+                isScreenSharing
+                  ? "bg-red-500/20 hover:bg-red-500/30 border-red-500/50 text-red-200"
+                  : "bg-[#1c1c24] hover:bg-[#d4af37]/10 border-white/10 text-white"
+              }`}
+            >
+              <span className={`relative flex h-2 w-2 ${isScreenSharing ? "inline-flex" : "hidden"}`}>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+              <span>{isScreenSharing ? "Stop Sharing" : "Go Live (Screen Share)"}</span>
+            </button>
+          )}
 
           <button
             onClick={() => inputRef.current?.click()}

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
+import Peer from "simple-peer";
 
 // Hooks
 import { useFrameAccurateVideo } from "@/hooks/useFrameAccurateVideo";
@@ -145,6 +146,204 @@ export default function DashboardPage() {
     handleDownloadReport,
     jumpToTime,
   } = useLiveComments(user, previewFile, videoRef);
+
+  // Over-the-Shoulder (OTS) Screen Share States & Refs
+  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const screenPeersRef = useRef<{ [socketId: string]: any }>({});
+  const clientScreenPeerRef = useRef<any>(null);
+  const cinemaVideoRef = useRef<HTMLVideoElement>(null);
+
+  const isEditor = user?.app_metadata?.role === "admin" ||
+                   user?.email?.includes("editor") ||
+                   user?.email?.includes("admin");
+
+  const startScreenShare = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 30 },
+        audio: true,
+      });
+      screenStreamRef.current = stream;
+      setIsScreenSharing(true);
+      setIsLiveStreaming(true);
+
+      // Render locally for the editor
+      setTimeout(() => {
+        if (cinemaVideoRef.current) {
+          cinemaVideoRef.current.srcObject = stream;
+        }
+      }, 100);
+
+      // Notify the room
+      const roomId = previewFile?.name || currentFolder || "global-lobby";
+      if (socket) {
+        socket.emit("editor-start-live-stream", { roomId });
+      }
+
+      // Handle stream end
+      stream.getVideoTracks()[0].onended = () => {
+        stopScreenShare();
+      };
+    } catch (err) {
+      console.error("Failed to start screen share:", err);
+    }
+  };
+
+  const stopScreenShare = () => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = null;
+    }
+    Object.values(screenPeersRef.current).forEach((peer: any) => peer.destroy());
+    screenPeersRef.current = {};
+
+    setIsScreenSharing(false);
+    setIsLiveStreaming(false);
+
+    const roomId = previewFile?.name || currentFolder || "global-lobby";
+    if (socket) {
+      socket.emit("editor-stop-live-stream", { roomId });
+    }
+  };
+
+  // Screen Share WebRTC Signaling Effect
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleEditorStart = (data: { roomId: string; editorSocketId: string }) => {
+      console.log("Editor started live stream:", data);
+      setIsLiveStreaming(true);
+      socket.emit("client-ready-for-stream", {
+        targetSocketId: data.editorSocketId,
+        roomId: data.roomId,
+      });
+    };
+
+    const handleEditorStop = () => {
+      console.log("Editor stopped live stream");
+      setIsLiveStreaming(false);
+      if (clientScreenPeerRef.current) {
+        clientScreenPeerRef.current.destroy();
+        clientScreenPeerRef.current = null;
+      }
+      if (cinemaVideoRef.current) {
+        cinemaVideoRef.current.srcObject = null;
+      }
+    };
+
+    const handleClientReady = (data: { clientSocketId: string }) => {
+      if (!screenStreamRef.current) return;
+      console.log("Client ready for stream:", data.clientSocketId);
+
+      // SimplePeer uses initiator mode for sender
+      const peer = new Peer({
+        initiator: true,
+        trickle: false,
+        stream: screenStreamRef.current,
+      });
+
+      peer.on("signal", (signal) => {
+        socket.emit("screen-webrtc-offer", {
+          targetSocketId: data.clientSocketId,
+          sdp: signal,
+        });
+      });
+
+      peer.on("close", () => {
+        peer.destroy();
+        delete screenPeersRef.current[data.clientSocketId];
+      });
+
+      peer.on("error", (err) => {
+        console.error("Sender screen peer error:", err);
+      });
+
+      screenPeersRef.current[data.clientSocketId] = peer;
+    };
+
+    const handleScreenOffer = (data: { callerSocketId: string; sdp: any }) => {
+      console.log("Received screen WebRTC offer");
+      const peer = new Peer({
+        initiator: false,
+        trickle: false,
+      });
+
+      peer.on("signal", (signal) => {
+        socket.emit("screen-webrtc-answer", {
+          targetSocketId: data.callerSocketId,
+          sdp: signal,
+        });
+      });
+
+      peer.on("stream", (remoteStream) => {
+        console.log("Received remote screen stream!");
+        if (cinemaVideoRef.current) {
+          cinemaVideoRef.current.srcObject = remoteStream;
+        }
+      });
+
+      peer.on("close", () => {
+        peer.destroy();
+        if (clientScreenPeerRef.current === peer) {
+          clientScreenPeerRef.current = null;
+        }
+      });
+
+      peer.on("error", (err) => {
+        console.error("Receiver screen peer error:", err);
+      });
+
+      peer.signal(data.sdp);
+      clientScreenPeerRef.current = peer;
+    };
+
+    const handleScreenAnswer = (data: { answererSocketId: string; sdp: any }) => {
+      console.log("Received screen WebRTC answer");
+      const peer = screenPeersRef.current[data.answererSocketId];
+      if (peer) {
+        peer.signal(data.sdp);
+      }
+    };
+
+    const handleUserDisconnected = (socketId: string) => {
+      const peer = screenPeersRef.current[socketId];
+      if (peer) {
+        peer.destroy();
+        delete screenPeersRef.current[socketId];
+      }
+    };
+
+    socket.on("editor-start-live-stream", handleEditorStart);
+    socket.on("editor-stop-live-stream", handleEditorStop);
+    socket.on("client-ready-for-stream", handleClientReady);
+    socket.on("screen-webrtc-offer", handleScreenOffer);
+    socket.on("screen-webrtc-answer", handleScreenAnswer);
+    socket.on("user-disconnected", handleUserDisconnected);
+
+    return () => {
+      socket.off("editor-start-live-stream", handleEditorStart);
+      socket.off("editor-stop-live-stream", handleEditorStop);
+      socket.off("client-ready-for-stream", handleClientReady);
+      socket.off("screen-webrtc-offer", handleScreenOffer);
+      socket.off("screen-webrtc-answer", handleScreenAnswer);
+      socket.off("user-disconnected", handleUserDisconnected);
+    };
+  }, [socket]);
+
+  // Cleanup stream tracks and peers on component unmount
+  useEffect(() => {
+    return () => {
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      Object.values(screenPeersRef.current).forEach((peer: any) => peer.destroy());
+      if (clientScreenPeerRef.current) {
+        clientScreenPeerRef.current.destroy();
+      }
+    };
+  }, []);
 
   const { smpteTimecode, stepForward, stepBackward } = useFrameAccurateVideo(
     videoRef,
@@ -443,6 +642,9 @@ export default function DashboardPage() {
         uploading={uploading}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        isEditor={isEditor}
+        isScreenSharing={isScreenSharing}
+        onToggleScreenShare={isScreenSharing ? stopScreenShare : startScreenShare}
       />
 
       {/* FIXED LIVE SESSION CONTAINER (Bottom Left) */}
@@ -500,7 +702,26 @@ export default function DashboardPage() {
         id="main-workspace-container"
         className="flex flex-1 overflow-hidden relative min-h-0"
       >
-        {/* Mobile Backdrop Overlay */}
+        {isLiveStreaming ? (
+          <div className="flex-1 h-full w-full bg-black relative flex items-center justify-center animate-fade-in">
+            <video
+              ref={cinemaVideoRef}
+              autoPlay
+              playsInline
+              className="w-full h-full object-contain"
+            />
+            {/* Pulsing red live indicator banner */}
+            <div className="absolute top-4 left-4 bg-black/85 text-[#d4af37] text-[10px] px-3.5 py-2 rounded-lg border border-[#d4af37]/45 backdrop-blur-md z-10 flex items-center gap-2.5 font-bold tracking-widest uppercase shadow-2xl select-none">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+              <span>Cinema Mode: Live Editing Share</span>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Mobile Backdrop Overlay */}
         {isSidebarOpen && (
           <div
             className="fixed inset-0 bg-black/60 z-30 md:hidden transition-opacity duration-300"
@@ -1013,6 +1234,8 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </main>
   );
