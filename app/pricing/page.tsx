@@ -61,7 +61,7 @@ export default function PricingPage() {
           </div>
 
           {/* Tier 2: Project Based (Highlighted) */}
-          <div className="bg-bg-panel border border-gold-primary p-10 relative flex flex-col transform lg:scale-105 shadow-[0_0_30px_rgba(212,175,55,0.15)] z-10 h-[105%] group">
+          <div className="bg-bg-panel border border-gold-primary p-10 relative flex flex-col transform lg:scale-105 shadow-[0_0_30px_rgba(212,175,55,0.15)] z-10 lg:h-[105%] h-full group">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-gold-primary text-black text-[9px] font-bold uppercase tracking-widest px-4 py-1 flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span>
               Most Common

@@ -50,6 +50,13 @@ export default function Home() {
             opacity: 0;
             animation: wordCutIn 0.2s forwards ease-out; 
           }
+
+          @media (min-width: 1024px) {
+            .hero-dashboard-mockup {
+              transform: rotateY(-15deg) rotateX(5deg);
+              box-shadow: -20px 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(212,175,55,0.1) !important;
+            }
+          }
         `,
         }}
       />
@@ -103,18 +110,13 @@ export default function Home() {
         </div>
 
         {/* Right Dashboard Mockup Area (3D Perspective) */}
-        <div className="w-full lg:w-1/2 relative mt-12 lg:mt-0 z-10 perspective-[1200px]">
+        <div className="w-full lg:w-1/2 relative mt-12 lg:mt-0 z-10 lg:perspective-[1200px]">
           {/* Subtle glow behind the image */}
           <div className="absolute inset-0 bg-gold-primary/20 blur-[100px] rounded-full scale-75"></div>
 
           {/* 3D Rotated Image Container */}
           <div
-            className="relative w-full rounded-xl border border-white/10 shadow-2xl bg-[#0e0e12] overflow-hidden transform transition-transform duration-700 hover:rotate-y-0 hover:rotate-x-0"
-            style={{
-              transform: "rotateY(-15deg) rotateX(5deg)",
-              boxShadow:
-                "-20px 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(212,175,55,0.1)",
-            }}
+            className="relative w-full rounded-xl border border-white/10 shadow-2xl bg-[#0e0e12] overflow-hidden transform transition-transform duration-700 hover:rotate-y-0 hover:rotate-x-0 hero-dashboard-mockup"
           >
             <img
               src="/dashboard-mockup.png"

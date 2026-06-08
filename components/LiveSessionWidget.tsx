@@ -174,7 +174,7 @@ export default function LiveSessionWidget({
   };
 
   return (
-    <div className="fixed bottom-6 left-6 z-[9999] flex flex-col items-start transition-all duration-300">
+    <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[9999] flex flex-col items-start transition-all duration-300">
       {/* অবস্থা ১: ইউজার এখনো লাইভে জয়েন করেননি */}
       {!hasJoined && (
         <button
@@ -225,7 +225,7 @@ export default function LiveSessionWidget({
 
       {/* অবস্থা ৩: ইউজার লাইভে আছেন এবং উইন্ডোটি সম্পূর্ণ ম্যাক্সিমাইজড (Full Chat & Video Panel) */}
       {hasJoined && !isMinimized && (
-        <div className="w-[350px] bg-[#121217]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
+        <div className="w-[350px] max-w-[calc(100vw-2rem)] bg-[#121217]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
           {/* হেডার কন্ট্রোলস */}
           <div className="h-12 bg-black/40 border-b border-white/5 flex items-center justify-between px-4 shrink-0">
             <div className="flex items-center gap-2">

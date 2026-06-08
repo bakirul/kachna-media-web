@@ -138,8 +138,8 @@ const handleSpeak = (text: string, langCode: string) => {
 
   const getWindowClassName = () => {
     if (isFullScreen) return "fixed inset-4 z-50 flex flex-col bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl transition-all duration-300";
-    if (isMinimized) return "fixed bottom-6 right-6 w-72 z-50 flex flex-col bg-zinc-950 border border-zinc-800 rounded-t-xl shadow-2xl transition-all duration-300";
-    return "fixed bottom-6 right-6 w-[450px] h-[650px] max-h-[85vh] z-50 flex flex-col bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl transition-all duration-300";
+    if (isMinimized) return "fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-72 max-w-[288px] z-50 flex flex-col bg-zinc-950 border border-zinc-800 rounded-t-xl shadow-2xl transition-all duration-300";
+    return "fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-[450px] max-w-[450px] h-[650px] max-h-[85vh] z-50 flex flex-col bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl transition-all duration-300";
   };
 
   return (
@@ -148,7 +148,7 @@ const handleSpeak = (text: string, langCode: string) => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 p-4 bg-zinc-900 border border-zinc-800 hover:border-[#d4af37]/50 text-[#d4af37] rounded-full shadow-lg hover:shadow-[#d4af37]/10 transition-all duration-300 group z-50"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 p-4 bg-zinc-900 border border-zinc-800 hover:border-[#d4af37]/50 text-[#d4af37] rounded-full shadow-lg hover:shadow-[#d4af37]/10 transition-all duration-300 group z-50"
         >
           <div className="flex items-center space-x-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

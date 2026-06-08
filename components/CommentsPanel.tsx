@@ -28,7 +28,7 @@ export default function CommentsPanel({
   isLive = false,
 }: CommentsPanelProps) {
   return (
-    <aside className="w-[320px] bg-[#121217] flex flex-col h-full border-l border-white/5 shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.5)] z-10">
+    <aside className="w-full bg-[#121217] flex flex-col h-full border-l border-white/5 shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.5)] z-10">
       <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0 bg-[#121217]">
         <h3 className="text-xs font-semibold text-gray-200 uppercase tracking-widest">
           Comments

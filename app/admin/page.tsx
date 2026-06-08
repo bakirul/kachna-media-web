@@ -709,7 +709,7 @@ export default function AdminPortal() {
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-          <div className="w-full max-w-7xl h-[85vh] flex flex-col lg:flex-row gap-0 border border-white/10 bg-bg-panel shadow-2xl overflow-hidden">
+          <div className="w-full max-w-7xl lg:h-[85vh] max-h-[95vh] lg:max-h-none flex flex-col lg:flex-row gap-0 border border-white/10 bg-bg-panel shadow-2xl overflow-y-auto lg:overflow-hidden">
             <div className="flex-grow bg-black flex flex-col justify-center relative">
               {previewFile.isVideo ? (
                 <video
@@ -727,7 +727,7 @@ export default function AdminPortal() {
               )}
             </div>
             {previewFile.isVideo && (
-              <div className="w-full lg:w-[400px] flex flex-col bg-bg-body shrink-0 border-l border-white/5 h-full">
+              <div className="w-full lg:w-[400px] flex flex-col bg-bg-body shrink-0 border-t lg:border-t-0 lg:border-l border-white/5 h-[400px] lg:h-full">
                 <div className="p-6 border-b border-white/5 bg-bg-panel">
                   <h3 className="text-gold-primary uppercase tracking-widest text-sm font-bold">
                     Client Review Notes

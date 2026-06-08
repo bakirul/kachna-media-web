@@ -447,7 +447,7 @@ export default function DashboardPage() {
 
       {/* FIXED LIVE SESSION CONTAINER (Bottom Left) */}
       {flags?.enable_live_session && user && socket && (
-        <div className="fixed bottom-6 left-6 z-[60] flex flex-col items-start transition-all duration-300">
+        <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[60] flex flex-col items-start transition-all duration-300">
           {isLiveMinimized && (
             <button
               onClick={() => setIsLiveMinimized(false)}
@@ -462,7 +462,7 @@ export default function DashboardPage() {
           )}
 
           {!isLiveMinimized && (
-            <div className="relative w-[350px] shadow-2xl rounded-xl overflow-hidden border border-white/10 bg-[#0a0a0f]">
+            <div className="relative w-[350px] max-w-[calc(100vw-2rem)] shadow-2xl rounded-xl overflow-hidden border border-white/10 bg-[#0a0a0f]">
               <button
                 onClick={() => setIsLiveMinimized(true)}
                 className="absolute top-3 right-3 bg-black/60 hover:bg-white/20 text-white rounded p-1.5 transition-colors z-[70] backdrop-blur-md border border-white/10 flex items-center justify-center w-7 h-7"
