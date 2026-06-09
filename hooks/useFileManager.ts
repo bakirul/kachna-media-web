@@ -11,7 +11,7 @@ export const useFileManager = (user: any, currentFolder: string) => {
 
   const fetchFiles = useCallback(
     async (userId: string, folderPath: string) => {
-      const targetPath = folderPath ? `${userId}/${folderPath}` : userId;
+      const targetPath = folderPath ? `shared/${folderPath}` : "shared";
       const { data } = await supabase.storage
         .from("client-vault")
         .list(targetPath, { sortBy: { column: "created_at", order: "desc" } });
@@ -27,8 +27,8 @@ export const useFileManager = (user: any, currentFolder: string) => {
         if (filesOnly.length > 0) {
           const pathsToSign = filesOnly.map((file) =>
             folderPath
-              ? `${userId}/${folderPath}/${file.name}`
-              : `${userId}/${file.name}`,
+              ? `shared/${folderPath}/${file.name}`
+              : `shared/${file.name}`,
           );
           const { data: signedUrls } = await supabase.storage
             .from("client-vault")
@@ -78,8 +78,8 @@ export const useFileManager = (user: any, currentFolder: string) => {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const targetPath = currentFolder
-        ? `${user.id}/${currentFolder}`
-        : user.id;
+        ? `shared/${currentFolder}`
+        : "shared";
       const filePath = `${targetPath}/${Date.now()}_${file.name}`;
 
       // Import the TUS uploader dynamically to avoid SSR issues
@@ -121,8 +121,8 @@ export const useFileManager = (user: any, currentFolder: string) => {
 
   const getFilePath = (fileName: string) =>
     currentFolder
-      ? `${user.id}/${currentFolder}/${fileName}`
-      : `${user.id}/${fileName}`;
+      ? `shared/${currentFolder}/${fileName}`
+      : `shared/${fileName}`;
 
   const getSignedUrl = async (fileName: string) => {
     const { data } = await supabase.storage
@@ -174,8 +174,8 @@ export const useFileManager = (user: any, currentFolder: string) => {
     const newName = `${prefix}${newCleanName.trim()}${ext}`;
     const oldPath = getFilePath(oldName);
     const newPath = currentFolder
-      ? `${user.id}/${currentFolder}/${newName}`
-      : `${user.id}/${newName}`;
+      ? `shared/${currentFolder}/${newName}`
+      : `shared/${newName}`;
 
     const { error } = await supabase.storage
       .from("client-vault")
@@ -191,8 +191,8 @@ export const useFileManager = (user: any, currentFolder: string) => {
     const folderName = prompt("Enter new folder name:");
     if (!folderName || folderName.trim() === "") return;
     const targetPath = currentFolder
-      ? `${user.id}/${currentFolder}/${folderName.trim()}/.keep`
-      : `${user.id}/${folderName.trim()}/.keep`;
+      ? `shared/${currentFolder}/${folderName.trim()}/.keep`
+      : `shared/${folderName.trim()}/.keep`;
     await supabase.storage
       .from("client-vault")
       .upload(targetPath, new Blob([""]));
@@ -207,8 +207,8 @@ export const useFileManager = (user: any, currentFolder: string) => {
     )
       return;
     const folderPath = currentFolder
-      ? `${user.id}/${currentFolder}/${folderName}`
-      : `${user.id}/${folderName}`;
+      ? `shared/${currentFolder}/${folderName}`
+      : `shared/${folderName}`;
     const { error } = await supabase.storage
       .from("client-vault")
       .remove([`${folderPath}/.keep`]);

@@ -87,7 +87,7 @@ export const useLiveComments = (
     return () => {
       newSocket.disconnect();
     };
-  }, [user, previewFile?.name, currentFolder]);
+  }, [user?.id, previewFile?.name, currentFolder]);
 
   const handleAddComment = async (e: React.FormEvent) => {
     // ... [আপনার আগের কোড হুবহু থাকবে] ...
