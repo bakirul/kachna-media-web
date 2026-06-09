@@ -8,6 +8,7 @@ export const useLiveComments = (
   user: any,
   previewFile: any,
   videoRef: React.RefObject<HTMLVideoElement>,
+  currentFolder?: string | null
 ) => {
   const supabase = createClient();
 
@@ -42,11 +43,8 @@ export const useLiveComments = (
 
     newSocket.on("connect", () => {
       setIsLive(true);
-      if (previewFile?.name) {
-        newSocket.emit("join-video-room", previewFile.name);
-      } else {
-        newSocket.emit("join-lobby", user.id);
-      }
+      const roomToJoin = previewFile?.name || currentFolder || "global-lobby";
+      newSocket.emit("join-video-room", roomToJoin);
     });
 
     newSocket.on("disconnect", () => setIsLive(false));
@@ -89,7 +87,7 @@ export const useLiveComments = (
     return () => {
       newSocket.disconnect();
     };
-  }, [user, previewFile?.name]);
+  }, [user, previewFile?.name, currentFolder]);
 
   const handleAddComment = async (e: React.FormEvent) => {
     // ... [আপনার আগের কোড হুবহু থাকবে] ...

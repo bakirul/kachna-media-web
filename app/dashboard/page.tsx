@@ -134,7 +134,7 @@ export default function DashboardPage() {
     handleCompileAndSend,
     handleDownloadReport,
     jumpToTime,
-  } = useLiveComments(user, previewFile, videoRef);
+  } = useLiveComments(user, previewFile, videoRef, currentFolder);
 
   // Over-the-Shoulder (OTS) Screen Share Refs
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -261,9 +261,15 @@ export default function DashboardPage() {
       });
 
       peer.on("stream", (remoteStream) => {
-        if (cinemaVideoRef.current) {
-          cinemaVideoRef.current.srcObject = remoteStream;
-        }
+        const attachStream = () => {
+          if (cinemaVideoRef.current) {
+            cinemaVideoRef.current.srcObject = remoteStream;
+            cinemaVideoRef.current.play().catch(err => console.error("Client stream play error:", err));
+          } else {
+            setTimeout(attachStream, 100);
+          }
+        };
+        attachStream();
       });
 
       peer.on("close", () => {
