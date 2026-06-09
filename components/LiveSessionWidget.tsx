@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import Peer from "simple-peer";
 import { Socket } from "socket.io-client";
+import { useDashboardStore } from "@/store/useDashboardStore";
 
 interface LiveSessionProps {
   socket: Socket | null;
@@ -9,7 +10,30 @@ interface LiveSessionProps {
   user: any;
 }
 
-// 🚀 Helper Component for rendering Remote Video Streams
+const setMediaBitrate = (sdp: string, bitrate: number) => {
+  let lines = sdp.split('\r\n');
+  let mLineIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith('m=video')) {
+      mLineIndex = i;
+      break;
+    }
+  }
+  if (mLineIndex === -1) return sdp;
+  let insertIndex = mLineIndex;
+  for (let i = mLineIndex; i < lines.length; i++) {
+    if (lines[i].startsWith('c=')) {
+      insertIndex = i;
+      break;
+    }
+    if (lines[i].startsWith('m=') && i !== mLineIndex) {
+      break;
+    }
+  }
+  lines.splice(insertIndex + 1, 0, `b=AS:${bitrate}`);
+  return lines.join('\r\n');
+};
+
 const VideoPeer = ({ peer }: { peer: Peer.Instance }) => {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -32,13 +56,10 @@ export default function LiveSessionWidget({
   roomId,
   user,
 }: LiveSessionProps) {
-  // 🌟 দুই স্তরের স্টেট কন্ট্রোল
-  const [hasJoined, setHasJoined] = useState(false); // লাইভে যুক্ত আছেন কি না
-  const [isMinimized, setIsMinimized] = useState(false); // উইন্ডো মিনিমাইজড কি না
+  const { isLiveMinimized, setIsLiveMinimized } = useDashboardStore();
+  const [hasJoined, setHasJoined] = useState(false);
 
-  const [peers, setPeers] = useState<{ peerID: string; peer: Peer.Instance }[]>(
-    [],
-  );
+  const [peers, setPeers] = useState<{ peerID: string; peer: Peer.Instance }[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [chatMessages, setChatMessages] = useState<
     { senderName: string; text: string; timestamp: string }[]
@@ -49,14 +70,12 @@ export default function LiveSessionWidget({
   const peersRef = useRef<{ [socketId: string]: Peer.Instance }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // অটো স্ক্রোল চ্যাট
   useEffect(() => {
-    if (hasJoined && !isMinimized) {
+    if (hasJoined && !isLiveMinimized) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [chatMessages, isMinimized, hasJoined]);
+  }, [chatMessages, isLiveMinimized, hasJoined]);
 
-  // WebRTC & Socket Initialization (শুধুমাত্র hasJoined ট্রু হলে রান হবে)
   useEffect(() => {
     if (!socket || !roomId || !hasJoined) return;
 
@@ -78,7 +97,10 @@ export default function LiveSessionWidget({
             stream: mediaStream,
           });
 
-          peer.on("signal", (signal) => {
+          peer.on("signal", (signal: any) => {
+            if (signal.type === "offer" || signal.type === "answer") {
+              signal.sdp = setMediaBitrate(signal.sdp, 2500);
+            }
             socket.emit("webrtc-offer", {
               targetSocketId: socketId,
               callerId: user?.id,
@@ -97,7 +119,10 @@ export default function LiveSessionWidget({
             stream: mediaStream,
           });
 
-          peer.on("signal", (signal) => {
+          peer.on("signal", (signal: any) => {
+            if (signal.type === "offer" || signal.type === "answer") {
+              signal.sdp = setMediaBitrate(signal.sdp, 2500);
+            }
             socket.emit("webrtc-answer", {
               targetSocketId: data.callerSocketId,
               sdp: signal,
@@ -131,7 +156,6 @@ export default function LiveSessionWidget({
       });
 
     return () => {
-      // সেশন লিভ বা কম্পোনেন্ট আনমাউন্ট হলে সবকিছু ক্লিনআপ হবে
       if (localStream) {
         localStream.getTracks().forEach((track) => track.stop());
       }
@@ -167,20 +191,19 @@ export default function LiveSessionWidget({
   };
 
   const handleLeaveSession = () => {
-    if (confirm("Are you sure you want to leave the live session?")) {
+    if (window.confirm("Are you sure you want to leave the live session?")) {
       setHasJoined(false);
-      setIsMinimized(false);
+      setIsLiveMinimized(true);
     }
   };
 
   return (
-    <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[9999] flex flex-col items-start transition-all duration-300">
-      {/* অবস্থা ১: ইউজার এখনো লাইভে জয়েন করেননি */}
+    <div className="flex flex-col items-start transition-all duration-300 w-full">
       {!hasJoined && (
         <button
           onClick={() => {
             setHasJoined(true);
-            setIsMinimized(false);
+            setIsLiveMinimized(false);
           }}
           className="bg-[#121217] hover:bg-[#1c1c24] border border-[#d4af37]/40 text-[#d4af37] font-bold text-xs px-5 py-3.5 rounded-full shadow-2xl flex items-center gap-3 transition-all hover:scale-105 active:scale-95"
         >
@@ -192,12 +215,10 @@ export default function LiveSessionWidget({
         </button>
       )}
 
-      {/* অবস্থা ২: ইউজার লাইভে আছেন কিন্তু উইন্ডোটি মিনিমাইজ করে রেখেছেন (Floating Active Pill) */}
-      {hasJoined && isMinimized && (
+      {hasJoined && isLiveMinimized && (
         <div className="bg-[#121217]/95 border border-green-500/40 backdrop-blur-xl rounded-full p-2 px-4 shadow-2xl flex items-center gap-3 animate-bounce-short">
-          {/* এই অংশে ক্লিক করলে ম্যাক্সিমাইজ হবে */}
           <div
-            onClick={() => setIsMinimized(false)}
+            onClick={() => setIsLiveMinimized(false)}
             className="flex items-center gap-2 cursor-pointer group"
             title="Maximize Live Session"
           >
@@ -209,10 +230,7 @@ export default function LiveSessionWidget({
               Live Active ({peers.length + 1})
             </span>
           </div>
-
           <div className="w-[1px] h-4 bg-white/10" />
-
-          {/* লিভ বাটন */}
           <button
             onClick={handleLeaveSession}
             className="text-red-400 hover:text-red-500 text-[11px] font-bold transition-colors"
@@ -223,10 +241,8 @@ export default function LiveSessionWidget({
         </div>
       )}
 
-      {/* অবস্থা ৩: ইউজার লাইভে আছেন এবং উইন্ডোটি সম্পূর্ণ ম্যাক্সিমাইজড (Full Chat & Video Panel) */}
-      {hasJoined && !isMinimized && (
-        <div className="w-[350px] max-w-[calc(100vw-2rem)] bg-[#121217]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
-          {/* হেডার কন্ট্রোলস */}
+      {hasJoined && !isLiveMinimized && (
+        <div className="w-[350px] max-w-[calc(100vw-2rem)] bg-[#121217]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in pointer-events-auto">
           <div className="h-12 bg-black/40 border-b border-white/5 flex items-center justify-between px-4 shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
@@ -234,25 +250,13 @@ export default function LiveSessionWidget({
                 Live Session ({peers.length + 1})
               </span>
             </div>
-
-            {/* মিনিমাইজ এবং ক্লোজ অ্যাকশনস */}
             <div className="flex items-center gap-1.5">
               <button
-                onClick={() => setIsMinimized(true)}
+                onClick={() => setIsLiveMinimized(true)}
                 className="text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-1.5 rounded-md"
                 title="Minimize Panel"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
               </button>
@@ -261,17 +265,7 @@ export default function LiveSessionWidget({
                 className="text-red-400 hover:text-red-200 transition-colors bg-red-500/10 hover:bg-red-500/20 p-1.5 rounded-md"
                 title="Leave Session"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                   <polyline points="16 17 21 12 16 7"></polyline>
                   <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -280,8 +274,7 @@ export default function LiveSessionWidget({
             </div>
           </div>
 
-          {/* ভিডিও বাবলস */}
-          <div className="flex flex-wrap gap-2 px-3 pt-3 pointer-events-auto shrink-0">
+          <div className="flex flex-wrap gap-2 px-3 pt-3 shrink-0">
             {stream && (
               <div className="relative group shrink-0">
                 <video
@@ -301,7 +294,6 @@ export default function LiveSessionWidget({
             ))}
           </div>
 
-          {/* চ্যাট এরিয়া */}
           <div className="p-3 overflow-y-auto custom-scrollbar flex flex-col gap-3 h-[250px]">
             {chatMessages.length === 0 ? (
               <div className="m-auto text-[10px] text-gray-500 text-center">
@@ -327,7 +319,6 @@ export default function LiveSessionWidget({
             <div ref={messagesEndRef} />
           </div>
 
-          {/* ইনপুট ফিল্ড */}
           <form
             onSubmit={handleSendMessage}
             className="p-3 border-t border-white/5 bg-black/40 shrink-0"
@@ -345,15 +336,7 @@ export default function LiveSessionWidget({
                 disabled={!newMsg.trim()}
                 className="absolute right-2 p-1.5 bg-[#d4af37] text-black rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                   <line x1="22" y1="2" x2="11" y2="13"></line>
                   <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                 </svg>
