@@ -19,17 +19,28 @@ const languageMap: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("🟢 [API/CHAT] Incoming request received");
+    
     if (!genAI) {
+      console.error("🔴 [API/CHAT] Gemini API key is not configured");
       return NextResponse.json(
         { error: "Gemini API key is not configured on the server." },
         { status: 500 }
       );
     }
 
-    const { message, selectedLanguage } = await req.json();
+    const body = await req.json();
+    console.log("🟢 [API/CHAT] Parsed request body:", body);
+
+    const { message, selectedLanguage, folderId, workspaceId } = body;
 
     if (!message) {
+      console.error("🔴 [API/CHAT] Message content is missing in the request");
       return NextResponse.json({ error: "Message content is required" }, { status: 400 });
+    }
+
+    if (!workspaceId) {
+      console.warn("⚠️ [API/CHAT] Warning: workspaceId is missing or null for this user. This might cause issues if history is saved.");
     }
 
     let systemInstruction = 
@@ -53,10 +64,11 @@ export async function POST(req: NextRequest) {
     const result = await model.generateContent(message);
     const responseText = result.response.text();
 
+    console.log("🟢 [API/CHAT] Response generated successfully");
     return NextResponse.json({ text: responseText });
 
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
+    console.error("🔴 [API/CHAT] Gemini API Error / Execution Failure:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }

@@ -66,6 +66,18 @@ export default function LiveSessionWidget({
   >([]);
   const [newMsg, setNewMsg] = useState("");
 
+  // Translation State
+  const [isTranslationEnabled, setIsTranslationEnabled] = useState(false);
+  const isTranslationEnabledRef = useRef(false);
+  const [liveCaption, setLiveCaption] = useState("");
+  
+  const captionTimeout = useRef<NodeJS.Timeout | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const syntheticDestRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const translatedStreamRef = useRef<MediaStream | null>(null);
+
   const myVideo = useRef<HTMLVideoElement>(null);
   const peersRef = useRef<{ [socketId: string]: Peer.Instance }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -84,17 +96,42 @@ export default function LiveSessionWidget({
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((mediaStream) => {
-        localStream = mediaStream;
+        localStreamRef.current = mediaStream;
         setStream(mediaStream);
         if (myVideo.current) myVideo.current.srcObject = mediaStream;
+
+        // --- AUDIO TRANSLATION PIPELINE SETUP ---
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        syntheticDestRef.current = audioContextRef.current.createMediaStreamDestination();
+        
+        translatedStreamRef.current = new MediaStream([
+          mediaStream.getVideoTracks()[0],
+          syntheticDestRef.current.stream.getAudioTracks()[0]
+        ]);
+
+        try {
+          mediaRecorderRef.current = new MediaRecorder(mediaStream, { mimeType: "audio/webm;codecs=opus" });
+          mediaRecorderRef.current.ondataavailable = async (event) => {
+            if (event.data.size > 0 && isTranslationEnabledRef.current) {
+                const buffer = await event.data.arrayBuffer();
+                socket.emit("audio-chunk", {
+                    roomId,
+                    chunk: buffer,
+                    senderId: user?.id
+                });
+            }
+          };
+          mediaRecorderRef.current.start(250);
+        } catch(e) { console.error("MediaRecorder start failed", e); }
 
         socket.emit("join-call", roomId, user?.email || "Team Member");
 
         socket.on("user-connected", (userId: string, socketId: string) => {
+          const activeStream = isTranslationEnabledRef.current ? translatedStreamRef.current! : localStreamRef.current!;
           const peer = new Peer({
             initiator: true,
             trickle: false,
-            stream: mediaStream,
+            stream: activeStream,
           });
 
           peer.on("signal", (signal: any) => {
@@ -113,10 +150,11 @@ export default function LiveSessionWidget({
         });
 
         socket.on("webrtc-offer", (data) => {
+          const activeStream = isTranslationEnabledRef.current ? translatedStreamRef.current! : localStreamRef.current!;
           const peer = new Peer({
             initiator: false,
             trickle: false,
-            stream: mediaStream,
+            stream: activeStream,
           });
 
           peer.on("signal", (signal: any) => {
@@ -150,15 +188,46 @@ export default function LiveSessionWidget({
         socket.on("receive-chat-message", (msg) => {
           setChatMessages((prev) => [...prev, msg]);
         });
+
+        // Pipeline testing events
+        socket.on("live-caption", (data) => {
+          setLiveCaption((prev) => prev + data.text);
+          if (captionTimeout.current) clearTimeout(captionTimeout.current);
+          captionTimeout.current = setTimeout(() => setLiveCaption(""), 3000);
+        });
+
+        socket.on("translated-audio-chunk", async (data) => {
+          if (!audioContextRef.current || !syntheticDestRef.current) return;
+          try {
+            const audioBuffer = await audioContextRef.current.decodeAudioData(data.chunk);
+            const source = audioContextRef.current.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(syntheticDestRef.current);
+            source.start();
+          } catch (e) {
+             // console.error("Audio decode error", e);
+          }
+        });
       })
       .catch((err) => {
         console.error("Failed to get local stream", err);
       });
 
     return () => {
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
+      if (translatedStreamRef.current) {
+        translatedStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close();
+      }
+      if (captionTimeout.current) clearTimeout(captionTimeout.current);
+
       Object.values(peersRef.current).forEach((peer) => peer.destroy());
       peersRef.current = {};
       setPeers([]);
@@ -169,8 +238,28 @@ export default function LiveSessionWidget({
       socket.off("webrtc-answer");
       socket.off("user-disconnected");
       socket.off("receive-chat-message");
+      socket.off("live-caption");
+      socket.off("translated-audio-chunk");
     };
   }, [socket, roomId, hasJoined, user]);
+
+  const toggleTranslation = () => {
+    const newState = !isTranslationEnabled;
+    setIsTranslationEnabled(newState);
+    isTranslationEnabledRef.current = newState;
+    
+    if (!localStreamRef.current || !translatedStreamRef.current) return;
+    
+    const activeStream = newState ? translatedStreamRef.current : localStreamRef.current;
+    
+    Object.values(peersRef.current).forEach(peer => {
+       const oldTrack = peer.streams[0]?.getAudioTracks()[0];
+       const newTrack = activeStream.getAudioTracks()[0];
+       if (oldTrack && newTrack) {
+           peer.replaceTrack(oldTrack, newTrack, peer.streams[0]);
+       }
+    });
+  };
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,6 +341,17 @@ export default function LiveSessionWidget({
             </div>
             <div className="flex items-center gap-1.5">
               <button
+                onClick={toggleTranslation}
+                className={`transition-colors p-1.5 rounded-md flex items-center gap-1 text-[10px] font-bold ${
+                  isTranslationEnabled 
+                    ? "bg-[#d4af37] text-black" 
+                    : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+                }`}
+                title="Toggle Real-Time Translation (bn -> en)"
+              >
+                {isTranslationEnabled ? "🌐 Translating" : "🌐 Translate"}
+              </button>
+              <button
                 onClick={() => setIsLiveMinimized(true)}
                 className="text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-1.5 rounded-md"
                 title="Minimize Panel"
@@ -274,7 +374,12 @@ export default function LiveSessionWidget({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 px-3 pt-3 shrink-0">
+          <div className="flex flex-wrap gap-2 px-3 pt-3 shrink-0 relative">
+            {liveCaption && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/80 px-3 py-1.5 rounded-lg text-[#d4af37] text-[10px] font-bold text-center z-50 whitespace-pre-wrap max-w-[90%] shadow-lg border border-[#d4af37]/30">
+                {liveCaption}
+              </div>
+            )}
             {stream && (
               <div className="relative group shrink-0">
                 <video
