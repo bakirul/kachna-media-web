@@ -33,9 +33,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     console.log("🟢 [API/CHAT] Parsed request body:", body);
 
-    const { message, selectedLanguage, folderId, workspaceId } = body;
+    const { message, prompt, text, selectedLanguage, folderId, workspaceId } = body;
+    const userMessage = message || prompt || text;
 
-    if (!message) {
+    if (!userMessage) {
       console.error("🔴 [API/CHAT] Message content is missing in the request");
       return NextResponse.json({ error: "Message content is required" }, { status: 400 });
     }
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
       systemInstruction: systemInstruction,
     });
 
-    const result = await model.generateContent(message);
+    const result = await model.generateContent(userMessage);
     const responseText = result.response.text();
 
     console.log("🟢 [API/CHAT] Response generated successfully");
