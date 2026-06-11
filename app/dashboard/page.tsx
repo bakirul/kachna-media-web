@@ -262,6 +262,7 @@ export default function DashboardPage() {
       });
 
       peer.on("stream", (remoteStream) => {
+        setIsLiveStreaming(true); // Force the UI to switch to the TimelineShareWidget
         const attachStream = () => {
           if (cinemaVideoRef.current) {
             cinemaVideoRef.current.srcObject = remoteStream;
@@ -277,6 +278,7 @@ export default function DashboardPage() {
         peer.destroy();
         if (clientScreenPeerRef.current === peer) {
           clientScreenPeerRef.current = null;
+          setIsLiveStreaming(false); // Return to default grid view when stream ends
         }
       });
 

@@ -12,6 +12,7 @@ const TimelineShareWidget = React.memo(({ cinemaVideoRef }: TimelineShareWidgetP
         ref={cinemaVideoRef}
         autoPlay
         playsInline
+        muted
         className="w-full h-full object-contain"
       />
       <div className="absolute top-4 left-4 bg-black/85 text-[#d4af37] text-[10px] px-3.5 py-2 rounded-lg border border-[#d4af37]/45 backdrop-blur-md z-10 flex items-center gap-2.5 font-bold tracking-widest uppercase shadow-2xl select-none">
