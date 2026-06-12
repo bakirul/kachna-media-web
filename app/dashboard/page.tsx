@@ -142,13 +142,38 @@ export default function DashboardPage() {
   const screenPeersRef = useRef<{ [socketId: string]: any }>({});
   const clientScreenPeerRef = useRef<any>(null);
   const cinemaVideoRef = useRef<HTMLVideoElement>(null);
+  const clientAudioStreamRef = useRef<MediaStream | null>(null);
 
   const startScreenShare = async () => {
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
         video: { frameRate: 30 },
         audio: false, // Set to false to avoid hardware stream locks with LiveSessionWidget's getUserMedia
       });
+
+      // Constraints optimized for zero-latency voice talkback
+      const audioConstraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          latency: 0 // Prioritize lowest possible latency
+        }
+      };
+
+      let audioStream;
+      try {
+        audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+      } catch (err) {
+        console.warn("Could not get admin audio:", err);
+      }
+
+      const tracks = [...displayStream.getVideoTracks()];
+      if (audioStream) {
+        tracks.push(...audioStream.getAudioTracks());
+      }
+      const stream = new MediaStream(tracks);
+
       screenStreamRef.current = stream;
       setIsScreenSharing(true);
       setIsLiveStreaming(true);
@@ -217,6 +242,10 @@ export default function DashboardPage() {
       if (cinemaVideoRef.current) {
         cinemaVideoRef.current.srcObject = null;
       }
+      if (clientAudioStreamRef.current) {
+        clientAudioStreamRef.current.getTracks().forEach(track => track.stop());
+        clientAudioStreamRef.current = null;
+      }
     };
 
     const handleClientReady = (data: { clientSocketId: string }) => {
@@ -238,6 +267,12 @@ export default function DashboardPage() {
         });
       });
 
+      peer.on("stream", (remoteStream) => {
+        const audio = new Audio();
+        audio.srcObject = remoteStream;
+        audio.play().catch(e => console.error("Admin audio play error:", e));
+      });
+
       peer.on("close", () => {
         peer.destroy();
         delete screenPeersRef.current[data.clientSocketId];
@@ -250,11 +285,34 @@ export default function DashboardPage() {
       screenPeersRef.current[data.clientSocketId] = peer;
     };
 
-    const handleScreenOffer = (data: { callerSocketId: string; sdp: any }) => {
-      const peer = new Peer({
+    const handleScreenOffer = async (data: { callerSocketId: string; sdp: any }) => {
+      let localAudioStream = clientAudioStreamRef.current;
+      if (!localAudioStream) {
+        try {
+          // Constraints optimized for zero-latency voice talkback
+          const audioConstraints = {
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              latency: 0 // Prioritize lowest possible latency
+            }
+          };
+          localAudioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+          clientAudioStreamRef.current = localAudioStream;
+        } catch (err) {
+          console.warn("Could not get client audio:", err);
+        }
+      }
+
+      const peerOptions: any = {
         initiator: false,
         trickle: false,
-      });
+      };
+      if (localAudioStream) {
+        peerOptions.stream = localAudioStream;
+      }
+      const peer = new Peer(peerOptions);
 
       // @ts-ignore
       peer.on('iceConnectionStateChange', () => {
@@ -347,6 +405,9 @@ export default function DashboardPage() {
     return () => {
       if (screenStreamRef.current) {
         screenStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (clientAudioStreamRef.current) {
+        clientAudioStreamRef.current.getTracks().forEach((track) => track.stop());
       }
       Object.values(screenPeersRef.current).forEach((peer: any) => peer.destroy());
       if (clientScreenPeerRef.current) {
