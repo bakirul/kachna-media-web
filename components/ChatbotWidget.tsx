@@ -12,7 +12,7 @@ interface Message {
 }
 
 export default function ChatbotWidget() {
-  const userLanguage = useDashboardStore((state) => state.userLanguage);
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [hasHydrated, setHasHydrated] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -93,7 +93,7 @@ const handleSpeak = (text: string, langCode: string) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userText,
-          selectedLanguage: userLanguage, 
+          selectedLanguage: selectedLanguage, 
         }),
       });
 
@@ -106,7 +106,7 @@ const handleSpeak = (text: string, langCode: string) => {
             id: (Date.now() + 1).toString(), 
             sender: "ai", 
             text: data.text,
-            langUsed: userLanguage // স্পিচ ল্যাঙ্গুয়েজ ট্র্যাকিং
+            langUsed: selectedLanguage // স্পিচ ল্যাঙ্গুয়েজ ট্র্যাকিং
           }
         ]);
       } else {
@@ -179,7 +179,22 @@ const handleSpeak = (text: string, langCode: string) => {
             <div className="flex items-center space-x-2.5">
               <div className="w-2.5 h-2.5 rounded-full bg-[#d4af37] shadow-[0_0_8px_#d4af37]" />
               <span className="text-sm font-medium text-zinc-200">Kachna AI</span>
-              <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full uppercase">{userLanguage}</span>
+              <select 
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full outline-none border border-zinc-700 cursor-pointer hover:bg-zinc-700 transition-colors uppercase"
+                title="Select Chatbot Language"
+              >
+                <option value="en">EN</option>
+                <option value="bn">BN</option>
+                <option value="hi">HI</option>
+                <option value="es">ES</option>
+                <option value="ar">AR</option>
+                <option value="fr">FR</option>
+                <option value="de">DE</option>
+                <option value="zh">ZH</option>
+                <option value="ja">JA</option>
+              </select>
             </div>
 
             {/* হেডার অ্যাকশন কন্ট্রোলস */}
