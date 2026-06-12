@@ -719,7 +719,7 @@ export default function DashboardPage() {
         className="flex flex-1 overflow-hidden relative min-h-0"
       >
         {isLiveStreaming ? (
-          <TimelineShareWidget cinemaVideoRef={cinemaVideoRef} />
+          <TimelineShareWidget cinemaVideoRef={cinemaVideoRef} socket={socket} isEditor={isEditor} />
         ) : (
           <>
             {isSidebarOpen && (
