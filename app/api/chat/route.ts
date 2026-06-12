@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+export const dynamic = 'force-dynamic';
+
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
@@ -24,10 +26,7 @@ export async function POST(req: NextRequest) {
     
     if (!process.env.GEMINI_API_KEY) {
       console.error("🔴 [API/CHAT] Gemini API key is not configured.");
-      return NextResponse.json(
-        { error: "API Key missing in production environment" },
-        { status: 500 }
-      );
+      throw new Error("GEMINI_API_KEY is missing");
     }
 
     const body = await req.json();
@@ -70,6 +69,10 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("🔴 [API/CHAT] Gemini API Error / Execution Failure:", error);
-    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message || "Internal Server Error",
+      details: error.toString(),
+      stack: error.stack
+    }, { status: 500 });
   }
 }
