@@ -156,8 +156,7 @@ export default function DashboardPage() {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
-          latency: 0 // Prioritize lowest possible latency
+          autoGainControl: true
         }
       };
 
@@ -294,8 +293,7 @@ export default function DashboardPage() {
             audio: {
               echoCancellation: true,
               noiseSuppression: true,
-              autoGainControl: true,
-              latency: 0 // Prioritize lowest possible latency
+              autoGainControl: true
             }
           };
           localAudioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);

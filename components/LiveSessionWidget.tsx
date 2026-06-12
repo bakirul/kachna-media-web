@@ -104,8 +104,7 @@ export default function LiveSessionWidget({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
-          latency: 0
+          autoGainControl: true
         } 
       })
       .then((mediaStream) => {
