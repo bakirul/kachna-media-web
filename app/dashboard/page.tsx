@@ -198,6 +198,7 @@ export default function DashboardPage() {
     if (!socket) return;
 
     const handleAdminStartedShare = (data: { roomId: string; editorSocketId: string }) => {
+      console.log("[DEBUG: Socket Rx] admin-started-timeline-share received", data);
       console.log("Admin started timeline share, forcing UI switch to Cinema Mode");
       setIsLiveStreaming(true); // Force UI switch BEFORE WebRTC negotiation
       socket.emit("timeline-client-ready", {
@@ -255,6 +256,20 @@ export default function DashboardPage() {
         trickle: false,
       });
 
+      // @ts-ignore
+      peer.on('iceConnectionStateChange', () => {
+        // @ts-ignore
+        console.log("[DEBUG: ICE State] ICE Connection State Change (event):", peer.iceConnectionState || "unknown");
+      });
+      // @ts-ignore
+      if (peer._pc) {
+        // @ts-ignore
+        peer._pc.addEventListener('iceconnectionstatechange', () => {
+          // @ts-ignore
+          console.log("[DEBUG: ICE State] ICE Connection State Change (native):", peer._pc.iceConnectionState);
+        });
+      }
+
       peer.on("signal", (signal: any) => {
         if (signal.type === "offer" || signal.type === "answer") {
           signal.sdp = setMediaBitrate(signal.sdp, 2500);
@@ -266,6 +281,8 @@ export default function DashboardPage() {
       });
 
       peer.on("stream", (remoteStream) => {
+        console.log("[DEBUG: WebRTC Stream] Stream Received:", remoteStream);
+        console.log("[DEBUG: Ref Check] State of cinemaVideoRef.current:", cinemaVideoRef.current);
         // UI is already mounted by admin-started-timeline-share, just attach stream safely
         const attachStream = () => {
           if (cinemaVideoRef.current) {

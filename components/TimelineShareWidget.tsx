@@ -1,11 +1,15 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 
 interface TimelineShareWidgetProps {
   cinemaVideoRef: React.RefObject<HTMLVideoElement>;
 }
 
 const TimelineShareWidget = React.memo(({ cinemaVideoRef }: TimelineShareWidgetProps) => {
+  useEffect(() => {
+    console.log("[DEBUG: UI Mount] Timeline Widget Mounted");
+  }, []);
+
   return (
     <div className="flex-1 h-full w-full bg-black relative flex items-center justify-center animate-fade-in">
       <video
