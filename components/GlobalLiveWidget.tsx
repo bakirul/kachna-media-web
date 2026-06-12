@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter, usePathname } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import LiveSessionWidget from "./LiveSessionWidget"; // আপনার মূল উইজেট
+import GlobalMicWidget from "./GlobalMicWidget"; // Import Global STT Widget
 
 export default function GlobalLiveWidget() {
   const [user, setUser] = useState<any>(null);
@@ -91,15 +92,21 @@ export default function GlobalLiveWidget() {
   }
 
   // 🚀 যদি ইউজার লগইন করা থাকে (Actual Widget)
-  // (ড্যাশবোর্ড পেজে আমরা আলাদাভাবে ফাইলের জন্য উইজেট রেন্ডার করি, তাই গ্লোবালটা ড্যাশবোর্ডে হাইড রাখতে পারি, অথবা ড্যাশবোর্ড থেকে মুছে শুধু গ্লোবালটা ব্যবহার করতে পারি)
   if (pathname === "/dashboard") {
-    return null; // ড্যাশবোর্ডে আমরা ভিডিও স্পেসিফিক উইজেট ব্যবহার করছি
+    return (
+      <div className="fixed bottom-20 left-6 z-[100]">
+        {socket && <GlobalMicWidget socket={socket} user={user} />}
+      </div>
+    );
   }
 
   return (
-    <div className="fixed bottom-6 left-6 z-[100] [&>div]:!bottom-0 [&>div]:!left-0 [&>div]:!right-auto [&>div]:!items-start">
+    <div className="fixed bottom-6 left-6 z-[100] [&>div]:!bottom-0 [&>div]:!left-0 [&>div]:!right-auto [&>div]:!items-start flex flex-col gap-2">
       {socket && (
-        <LiveSessionWidget socket={socket} roomId="global-lobby" user={user} />
+        <>
+          <LiveSessionWidget socket={socket} roomId="global-lobby" user={user} />
+          <GlobalMicWidget socket={socket} user={user} />
+        </>
       )}
     </div>
   );

@@ -10,8 +10,6 @@ interface TimelineShareWidgetProps {
 
 const TimelineShareWidget = React.memo(({ cinemaVideoRef, socket, isEditor }: TimelineShareWidgetProps) => {
   const [liveSubtitle, setLiveSubtitle] = useState<string | null>(null);
-  const [isMicActive, setIsMicActive] = useState(false);
-  const recognitionRef = useRef<any>(null);
   const subtitleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -50,56 +48,6 @@ const TimelineShareWidget = React.memo(({ cinemaVideoRef, socket, isEditor }: Ti
     };
   }, [socket, isEditor]);
 
-  // Client Side: Speech Recognition
-  useEffect(() => {
-    if (isEditor || typeof window === 'undefined') return;
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.warn("Speech Recognition API not supported in this browser.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[event.results.length - 1][0].transcript;
-      if (transcript && socket) {
-        socket.emit('translate-speech', { text: transcript, targetLang: 'Bengali' });
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
-      }
-    };
-  }, [socket, isEditor]);
-
-  useEffect(() => {
-    if (isEditor) return;
-    if (isMicActive && recognitionRef.current) {
-      try {
-        recognitionRef.current.start();
-      } catch (e) {}
-    } else if (!isMicActive && recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
-  }, [isMicActive, isEditor]);
-
   return (
     <div className="flex-1 h-full w-full bg-black relative flex items-center justify-center animate-fade-in">
       <video
@@ -117,14 +65,6 @@ const TimelineShareWidget = React.memo(({ cinemaVideoRef, socket, isEditor }: Ti
           </span>
           <span>Cinema Mode: Live Editing Share</span>
         </div>
-        {!isEditor && (
-          <button 
-            onClick={() => setIsMicActive(!isMicActive)}
-            className={`px-3 py-1.5 rounded text-[9px] transition-colors border ${isMicActive ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'}`}
-          >
-            {isMicActive ? "🔴 Live Translation Mic ON" : "Enable Live Translation Mic"}
-          </button>
-        )}
       </div>
 
       {isEditor && liveSubtitle && (
