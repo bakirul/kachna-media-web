@@ -96,10 +96,18 @@ export default function LiveSessionWidget({
   useEffect(() => {
     if (!socket || !roomId || !hasJoined) return;
 
-    let localStream: MediaStream;
+    let handlers: any = {};
 
     navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
+      .getUserMedia({ 
+        video: true, 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          latency: 0
+        } 
+      })
       .then((mediaStream) => {
         localStreamRef.current = mediaStream;
         setStream(mediaStream);
@@ -138,7 +146,7 @@ export default function LiveSessionWidget({
         socket.emit("join-call", roomId, user?.email || "Team Member");
         socket.emit("join-room-language", useDashboardStore.getState().userLanguage);
 
-        socket.on("user-connected", (userId: string, socketId: string) => {
+        handlers.userConnected = (userId: string, socketId: string) => {
           const peer = new Peer({
             initiator: true,
             trickle: false,
@@ -158,9 +166,10 @@ export default function LiveSessionWidget({
 
           peersRef.current[socketId] = peer;
           setPeers((prev) => [...prev, { peerID: socketId, peer }]);
-        });
+        };
+        socket.on("user-connected", handlers.userConnected);
 
-        socket.on("webrtc-offer", (data) => {
+        handlers.webrtcOffer = (data: any) => {
           const peer = new Peer({
             initiator: false,
             trickle: false,
@@ -180,22 +189,25 @@ export default function LiveSessionWidget({
           peer.signal(data.sdp);
           peersRef.current[data.callerSocketId] = peer;
           setPeers((prev) => [...prev, { peerID: data.callerSocketId, peer }]);
-        });
+        };
+        socket.on("webrtc-offer", handlers.webrtcOffer);
 
-        socket.on("webrtc-answer", (data) => {
+        handlers.webrtcAnswer = (data: any) => {
           const peer = peersRef.current[data.answererSocketId];
           if (peer) peer.signal(data.sdp);
-        });
+        };
+        socket.on("webrtc-answer", handlers.webrtcAnswer);
 
-        socket.on("user-disconnected", (socketId) => {
+        handlers.userDisconnected = (socketId: string) => {
           if (peersRef.current[socketId]) {
             peersRef.current[socketId].destroy();
             delete peersRef.current[socketId];
           }
           setPeers((prev) => prev.filter((p) => p.peerID !== socketId));
-        });
+        };
+        socket.on("user-disconnected", handlers.userDisconnected);
 
-        socket.on("receive-chat-message", async (msg) => {
+        handlers.receiveChatMessage = async (msg: any) => {
           if (msg.senderLanguage && msg.senderLanguage !== userLanguage) {
             try {
               const res = await fetch("/api/translate-text", {
@@ -213,16 +225,18 @@ export default function LiveSessionWidget({
             }
           }
           setChatMessages((prev) => [...prev, msg]);
-        });
+        };
+        socket.on("receive-chat-message", handlers.receiveChatMessage);
 
         // Pipeline testing events
-        socket.on("live-caption", (data) => {
+        handlers.liveCaption = (data: any) => {
           setLiveCaption((prev) => prev + data.text);
           if (captionTimeout.current) clearTimeout(captionTimeout.current);
           captionTimeout.current = setTimeout(() => setLiveCaption(""), 3000);
-        });
+        };
+        socket.on("live-caption", handlers.liveCaption);
 
-        socket.on("translated-audio-chunk", async (data) => {
+        handlers.translatedAudioChunk = async (data: any) => {
           if (!audioContextRef.current || !syntheticDestRef.current) return;
           try {
             const audioBuffer = await audioContextRef.current.decodeAudioData(data.chunk);
@@ -233,7 +247,8 @@ export default function LiveSessionWidget({
           } catch (e) {
              // console.error("Audio decode error", e);
           }
-        });
+        };
+        socket.on("translated-audio-chunk", handlers.translatedAudioChunk);
       })
       .catch((err) => {
         console.error("Failed to get local stream", err);
@@ -256,13 +271,13 @@ export default function LiveSessionWidget({
       setPeers([]);
       setStream(null);
 
-      socket.off("user-connected");
-      socket.off("webrtc-offer");
-      socket.off("webrtc-answer");
-      socket.off("user-disconnected");
-      socket.off("receive-chat-message");
-      socket.off("live-caption");
-      socket.off("translated-audio-chunk");
+      if (handlers.userConnected) socket.off("user-connected", handlers.userConnected);
+      if (handlers.webrtcOffer) socket.off("webrtc-offer", handlers.webrtcOffer);
+      if (handlers.webrtcAnswer) socket.off("webrtc-answer", handlers.webrtcAnswer);
+      if (handlers.userDisconnected) socket.off("user-disconnected", handlers.userDisconnected);
+      if (handlers.receiveChatMessage) socket.off("receive-chat-message", handlers.receiveChatMessage);
+      if (handlers.liveCaption) socket.off("live-caption", handlers.liveCaption);
+      if (handlers.translatedAudioChunk) socket.off("translated-audio-chunk", handlers.translatedAudioChunk);
     };
   }, [socket, roomId, hasJoined, user]);
 
