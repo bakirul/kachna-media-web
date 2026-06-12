@@ -98,14 +98,15 @@ const handleSpeak = (text: string, langCode: string) => {
       });
 
       const data = await response.json();
+      const aiResponseText = data.text || data.message || data.reply || data.response;
 
-      if (response.ok && data.text) {
+      if (response.ok && aiResponseText) {
         setMessages((prev) => [
           ...prev,
           { 
             id: (Date.now() + 1).toString(), 
             sender: "ai", 
-            text: data.text,
+            text: aiResponseText,
             langUsed: selectedLanguage // স্পিচ ল্যাঙ্গুয়েজ ট্র্যাকিং
           }
         ]);
