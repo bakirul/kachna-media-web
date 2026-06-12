@@ -8,8 +8,17 @@ interface TimelineShareWidgetProps {
   isEditor?: boolean;
 }
 
+const SUPPORTED_LANGUAGES = [
+  { label: "Bengali", geminiName: "Bengali", ttsCode: "bn-BD" },
+  { label: "English", geminiName: "English", ttsCode: "en-US" },
+  { label: "Hindi", geminiName: "Hindi", ttsCode: "hi-IN" },
+  { label: "Spanish", geminiName: "Spanish", ttsCode: "es-ES" },
+  { label: "Arabic", geminiName: "Arabic", ttsCode: "ar-SA" }
+];
+
 const TimelineShareWidget = React.memo(({ cinemaVideoRef, socket, isEditor }: TimelineShareWidgetProps) => {
   const [liveSubtitle, setLiveSubtitle] = useState<string | null>(null);
+  const [selectedLang, setSelectedLang] = useState(SUPPORTED_LANGUAGES[0]);
   const subtitleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -33,7 +42,7 @@ const TimelineShareWidget = React.memo(({ cinemaVideoRef, socket, isEditor }: Ti
       // Audio Playback (TTS)
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(data.translated);
-        utterance.lang = 'bn-BD';
+        utterance.lang = selectedLang.ttsCode;
         window.speechSynthesis.speak(utterance);
       }
     };
@@ -46,7 +55,7 @@ const TimelineShareWidget = React.memo(({ cinemaVideoRef, socket, isEditor }: Ti
         clearTimeout(subtitleTimeoutRef.current);
       }
     };
-  }, [socket, isEditor]);
+  }, [socket, isEditor, selectedLang]);
 
   return (
     <div className="flex-1 h-full w-full bg-black relative flex items-center justify-center animate-fade-in">
@@ -65,6 +74,22 @@ const TimelineShareWidget = React.memo(({ cinemaVideoRef, socket, isEditor }: Ti
           </span>
           <span>Cinema Mode: Live Editing Share</span>
         </div>
+        {isEditor && (
+          <select 
+            value={selectedLang.ttsCode}
+            onChange={(e) => {
+              const lang = SUPPORTED_LANGUAGES.find(l => l.ttsCode === e.target.value);
+              if (lang) setSelectedLang(lang);
+            }}
+            className="bg-black/50 text-[#d4af37] text-[9px] border border-[#d4af37]/40 rounded px-2 py-1 outline-none font-bold uppercase mt-1 w-fit cursor-pointer hover:bg-white/10 transition-colors"
+          >
+            {SUPPORTED_LANGUAGES.map(lang => (
+              <option key={lang.ttsCode} value={lang.ttsCode} className="bg-black">
+                Hear in: {lang.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {isEditor && liveSubtitle && (

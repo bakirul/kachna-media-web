@@ -7,8 +7,17 @@ interface GlobalMicWidgetProps {
   user: any;
 }
 
+const SUPPORTED_LANGUAGES = [
+  { label: "Bengali", geminiName: "Bengali", ttsCode: "bn-BD" },
+  { label: "English", geminiName: "English", ttsCode: "en-US" },
+  { label: "Hindi", geminiName: "Hindi", ttsCode: "hi-IN" },
+  { label: "Spanish", geminiName: "Spanish", ttsCode: "es-ES" },
+  { label: "Arabic", geminiName: "Arabic", ttsCode: "ar-SA" }
+];
+
 export default function GlobalMicWidget({ socket, user }: GlobalMicWidgetProps) {
   const [isMicActive, setIsMicActive] = useState(false);
+  const [selectedLang, setSelectedLang] = useState(SUPPORTED_LANGUAGES[0]);
   const recognitionRef = useRef<any>(null);
 
   // If the user is an admin/editor, they only receive TTS, so they don't need the mic widget
@@ -31,7 +40,7 @@ export default function GlobalMicWidget({ socket, user }: GlobalMicWidgetProps) 
     recognition.onresult = (event: any) => {
       const transcript = event.results[event.results.length - 1][0].transcript;
       if (transcript && socket) {
-        socket.emit('translate-speech', { text: transcript, targetLang: 'Bengali' });
+        socket.emit('translate-speech', { text: transcript, targetLang: selectedLang.geminiName });
       }
     };
 
@@ -48,7 +57,7 @@ export default function GlobalMicWidget({ socket, user }: GlobalMicWidgetProps) 
         } catch (e) {}
       }
     };
-  }, [socket, isEditor]);
+  }, [socket, isEditor, selectedLang]);
 
   useEffect(() => {
     if (isEditor) return;
@@ -66,7 +75,7 @@ export default function GlobalMicWidget({ socket, user }: GlobalMicWidgetProps) 
   if (isEditor) return null;
 
   return (
-    <div className="mt-3 ml-2 z-[60] pointer-events-auto">
+    <div className="mt-3 ml-2 z-[60] pointer-events-auto flex items-center gap-2">
       <button 
         onClick={() => setIsMicActive(!isMicActive)}
         className={`px-4 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border shadow-2xl flex items-center gap-2.5 ${
@@ -82,6 +91,21 @@ export default function GlobalMicWidget({ socket, user }: GlobalMicWidgetProps) 
         </span>
         {isMicActive ? "Live Translation Mic ON" : "Enable Live Translation Mic"}
       </button>
+
+      <select 
+        value={selectedLang.geminiName}
+        onChange={(e) => {
+          const lang = SUPPORTED_LANGUAGES.find(l => l.geminiName === e.target.value);
+          if (lang) setSelectedLang(lang);
+        }}
+        className="bg-[#121217] text-[#d4af37] text-[10px] border border-[#d4af37]/40 rounded-lg px-3 py-2.5 outline-none font-bold uppercase tracking-wider cursor-pointer shadow-2xl hover:bg-[#1c1c24] transition-colors"
+      >
+        {SUPPORTED_LANGUAGES.map(lang => (
+          <option key={lang.geminiName} value={lang.geminiName}>
+            Translate to: {lang.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
