@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import AppearanceSettings from "./dashboard/AppearanceSettings";
 import { useDashboardStore } from "@/store/useDashboardStore";
+import { useGlobalStore } from "@/store/useGlobalStore";
 
 const LANGUAGES = [
   { code: "en-US", label: "🇺🇸 EN-US" },
@@ -53,7 +54,9 @@ export default function DashboardHeader({
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    useGlobalStore.setState({ isMicActive: false, isLiveSessionActive: false, socketConnection: null });
     router.push("/access");
+    router.refresh();
   };
 
   return (

@@ -91,14 +91,7 @@ export default function GlobalLiveWidget() {
     );
   }
 
-  // 🚀 যদি ইউজার লগইন করা থাকে (Actual Widget)
-  if (pathname === "/dashboard") {
-    return (
-      <div className="fixed bottom-20 left-6 z-[100]">
-        {socket && <GlobalMicWidget socket={socket} user={user} />}
-      </div>
-    );
-  }
+  // Removed dashboard conditional rendering to allow global Live Session across entire app
 
   return (
     <div className="fixed bottom-6 left-6 z-[100] [&>div]:!bottom-0 [&>div]:!left-0 [&>div]:!right-auto [&>div]:!items-start flex flex-col gap-2">

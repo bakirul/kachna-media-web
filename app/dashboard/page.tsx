@@ -700,17 +700,7 @@ export default function DashboardPage() {
         onToggleScreenShare={isScreenSharing ? stopScreenShare : startScreenShare}
       />
 
-      {flags?.enable_live_session && user && socket && (
-        <ErrorBoundary fallback={<div className="fixed bottom-4 left-4 z-[60] bg-red-900/50 p-2 rounded text-xs text-red-200">Live Session Error</div>}>
-          <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[60] flex flex-col items-start transition-all duration-300 pointer-events-none">
-            <LiveSessionWidget
-              socket={socket}
-              roomId={`global-${previewFile?.name || currentFolder || "global-lobby"}`}
-              user={user}
-            />
-          </div>
-        </ErrorBoundary>
-      )}
+
 
       <div
         id="main-workspace-container"

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Peer from "simple-peer";
 import { Socket } from "socket.io-client";
 import { useDashboardStore } from "@/store/useDashboardStore";
+import { useGlobalStore } from "@/store/useGlobalStore";
 
 interface LiveSessionProps {
   socket: Socket | null;
@@ -58,8 +59,8 @@ export default function LiveSessionWidget({
   user,
 }: LiveSessionProps) {
   const { isLiveMinimized, setIsLiveMinimized, userLanguage } = useDashboardStore();
+  const { isLiveSessionActive: hasJoined, setIsLiveSessionActive: setHasJoined } = useGlobalStore();
   const [hasHydrated, setHasHydrated] = useState(false);
-  const [hasJoined, setHasJoined] = useState(false);
 
   const [peers, setPeers] = useState<{ peerID: string; peer: Peer.Instance }[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
