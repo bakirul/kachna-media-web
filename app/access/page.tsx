@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
 
 export default function AccessPage() {
   const [email, setEmail] = useState("");
@@ -41,11 +42,14 @@ export default function AccessPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center relative px-6 bg-bg-body text-text-gray font-main overflow-x-hidden selection:bg-gold-primary selection:text-black">
-      {/* Background Glow Effect */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gold-primary blur-[200px] opacity-10 -z-10 rounded-full pointer-events-none"></div>
+    <main className="min-h-screen flex flex-col relative bg-bg-body text-text-gray font-main overflow-x-hidden selection:bg-gold-primary selection:text-black">
+      <Navbar />
+      
+      <div className="flex-1 flex flex-col items-center justify-center w-full px-6 relative">
+        {/* Background Glow Effect */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gold-primary blur-[200px] opacity-10 -z-10 rounded-full pointer-events-none"></div>
 
-      <div className="w-full max-w-[450px] mx-auto bg-bg-panel p-8 md:p-12 border border-white/5 relative shadow-2xl">
+        <div className="w-full max-w-[450px] mx-auto bg-bg-panel p-8 md:p-12 border border-white/5 relative shadow-2xl">
         {/* Original Golden Top Border Line */}
         <div className="absolute top-0 left-0 w-full h-[2px] bg-gold-primary/50"></div>
 
@@ -130,6 +134,7 @@ export default function AccessPage() {
             )}
           </button>
         </form>
+      </div>
       </div>
     </main>
   );
