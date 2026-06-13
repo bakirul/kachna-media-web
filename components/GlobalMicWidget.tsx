@@ -17,7 +17,7 @@ const SUPPORTED_LANGUAGES = [
 ];
 
 export default function GlobalMicWidget({ socket, user }: GlobalMicWidgetProps) {
-  const { isMicActive, setIsMicActive, selectedLanguage, setSelectedLanguage } = useGlobalStore();
+  const { isMicActive, setIsMicActive, selectedLanguage } = useGlobalStore();
   const selectedLangObj = SUPPORTED_LANGUAGES.find(l => l.value === selectedLanguage) || SUPPORTED_LANGUAGES[1]; // default 'en'
   const recognitionRef = useRef<any>(null);
 
@@ -77,18 +77,6 @@ export default function GlobalMicWidget({ socket, user }: GlobalMicWidgetProps) 
         </span>
         {isMicActive ? "Live Translation Active" : "Enable Live Mic"}
       </button>
-
-      <select 
-        value={selectedLangObj.value}
-        onChange={(e) => setSelectedLanguage(e.target.value)}
-        className="bg-black/60 backdrop-blur-md text-white/90 text-xs font-medium border border-white/10 rounded-full px-4 py-2.5 outline-none tracking-wide cursor-pointer shadow-2xl hover:bg-black/80 hover:border-white/20 transition-all duration-300"
-      >
-        {SUPPORTED_LANGUAGES.map(lang => (
-          <option key={lang.value} value={lang.value} className="bg-zinc-900 text-white">
-            Target: {lang.label}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }

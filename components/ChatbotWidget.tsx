@@ -12,7 +12,7 @@ interface Message {
 }
 
 export default function ChatbotWidget() {
-  const { selectedLanguage, setSelectedLanguage } = useGlobalStore();
+  const { selectedLanguage } = useGlobalStore();
   const [hasHydrated, setHasHydrated] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -166,21 +166,6 @@ export default function ChatbotWidget() {
             <div className="flex items-center space-x-3">
               <div className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
               <span className="text-sm font-semibold text-white tracking-wide">Kachna AI</span>
-              <select 
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
-                className="text-[10px] bg-black/40 text-white/80 px-2.5 py-1 rounded-md outline-none border border-white/10 cursor-pointer hover:bg-white/10 transition-colors uppercase font-medium"
-              >
-                <option value="en">EN</option>
-                <option value="bn">BN</option>
-                <option value="hi">HI</option>
-                <option value="es">ES</option>
-                <option value="ar">AR</option>
-                <option value="fr">FR</option>
-                <option value="de">DE</option>
-                <option value="zh">ZH</option>
-                <option value="ja">JA</option>
-              </select>
             </div>
 
             <div className="flex items-center space-x-2 text-white/50">

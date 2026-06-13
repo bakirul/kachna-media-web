@@ -44,6 +44,8 @@ export default function DashboardHeader({
 
   const { isSidebarOpen, setIsSidebarOpen, isEditor, isScreenSharing } = useDashboardStore();
   const userLanguage = useDashboardStore((state) => state.userLanguage);
+  const selectedLanguage = useGlobalStore((state) => state.selectedLanguage);
+  const setSelectedLanguage = useGlobalStore((state) => state.setSelectedLanguage);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -99,8 +101,8 @@ export default function DashboardHeader({
         <div className="flex items-center gap-2 sm:gap-3">
           {hasHydrated && (
             <select
-              value={userLanguage}
-              onChange={(e) => useDashboardStore.getState().setUserLanguage(e.target.value)}
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
               className="text-gray-900 bg-white dark:bg-gray-800 dark:text-white border border-gray-300 dark:border-gray-600 px-2 py-1.5 rounded-md shadow-sm text-[11px] uppercase tracking-widest focus:outline-none focus:border-[#d4af37]/50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {LANGUAGES.map((lang) => (
