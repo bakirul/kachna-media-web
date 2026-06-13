@@ -114,8 +114,12 @@ export default function DashboardHeader({
           )}
 
           <button
-            onClick={() => setIsAppearanceOpen(true)}
-            className="text-[11px] uppercase tracking-widest border border-white/10 px-4 py-2 hover:bg-[#d4af37]/10 transition-colors text-white flex items-center gap-2 bg-[#1c1c24] rounded-md shadow-sm"
+            onClick={() => setIsAppearanceOpen(!isAppearanceOpen)}
+            className={`text-[11px] uppercase tracking-widest border px-4 py-2 transition-colors flex items-center gap-2 rounded-md shadow-sm ${
+              isAppearanceOpen
+                ? "border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]"
+                : "border-white/10 bg-[#1c1c24] text-white hover:bg-[#d4af37]/10"
+            }`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
