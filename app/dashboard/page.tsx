@@ -21,6 +21,9 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import FileGrid from "@/components/dashboard/FileGrid";
 import LUFSMeter from "@/components/LUFSMeter";
 import TimelineShareWidget from "@/components/TimelineShareWidget";
+import RenameModal from "@/components/modals/RenameModal";
+import DeleteModal from "@/components/modals/DeleteModal";
+import MoveModal from "@/components/modals/MoveModal";
 
 const setMediaBitrate = (sdp: string, bitrate: number) => {
   let lines = sdp.split('\r\n');
@@ -110,13 +113,19 @@ export default function DashboardPage() {
     vaultItems,
     fileUrls,
     uploading,
+    allFolders,
     handleUpload,
     getSignedUrl,
     handleDeleteFile,
     handleRenameFile,
+    handleMoveFile,
     handleCreateFolder,
     handleDeleteFolder,
   } = useFileManager(user, currentFolder);
+
+  const [renameModalState, setRenameModalState] = useState<{ isOpen: boolean; itemName: string; isFolder: boolean }>({ isOpen: false, itemName: "", isFolder: false });
+  const [deleteModalState, setDeleteModalState] = useState<{ isOpen: boolean; itemName: string; isFolder: boolean }>({ isOpen: false, itemName: "", isFolder: false });
+  const [moveModalState, setMoveModalState] = useState<{ isOpen: boolean; itemName: string }>({ isOpen: false, itemName: "" });
 
   // Live Comments Hook
   const {
@@ -641,14 +650,10 @@ export default function DashboardPage() {
     }
   };
 
-  const onDeleteFile = (fileName: string) =>
-    handleDeleteFile(fileName, () => {
-      if (previewFile?.name === fileName) setPreviewFile(null);
-    });
-  const onRenameFile = (oldName: string) =>
-    handleRenameFile(oldName, () => {
-      if (previewFile?.name === oldName) setPreviewFile(null);
-    });
+  const onDeleteFile = (fileName: string) => setDeleteModalState({ isOpen: true, itemName: fileName, isFolder: false });
+  const onRenameFile = (fileName: string) => setRenameModalState({ isOpen: true, itemName: fileName, isFolder: false });
+  const onMoveFile = (fileName: string) => setMoveModalState({ isOpen: true, itemName: fileName });
+  const onDeleteFolderUI = (folderName: string) => setDeleteModalState({ isOpen: true, itemName: folderName, isFolder: true });
 
   const folders = (vaultItems || []).filter((item) => !item?.metadata);
   const files = (vaultItems || []).filter((item) => item?.metadata);
@@ -734,7 +739,7 @@ export default function DashboardPage() {
                 onFolderClick={setCurrentFolder}
                 onRootClick={() => setCurrentFolder("")}
                 onCreateFolder={handleCreateFolder}
-                onDeleteFolder={handleDeleteFolder}
+                onDeleteFolder={onDeleteFolderUI}
               />
             </div>
 
@@ -772,6 +777,7 @@ export default function DashboardPage() {
                     onPreview={handlePreview}
                     onRenameFile={onRenameFile}
                     onDeleteFile={onDeleteFile}
+                    onMoveFile={onMoveFile}
                   />
                 </div>
               </section>
@@ -1122,6 +1128,58 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+    <RenameModal
+        isOpen={renameModalState.isOpen}
+        onClose={() => setRenameModalState({ isOpen: false, itemName: "", isFolder: false })}
+        onConfirm={(newName) => {
+          handleRenameFile(renameModalState.itemName, newName, () => {
+            if (previewFile?.name === renameModalState.itemName) setPreviewFile(null);
+          });
+          setRenameModalState({ isOpen: false, itemName: "", isFolder: false });
+        }}
+        currentName={(() => {
+          const name = renameModalState.itemName;
+          const underscoreIdx = name.indexOf("_");
+          const actualNameWithExt = underscoreIdx !== -1 ? name.substring(underscoreIdx + 1) : name;
+          const dotIdx = actualNameWithExt.lastIndexOf(".");
+          return dotIdx !== -1 ? actualNameWithExt.substring(0, dotIdx) : actualNameWithExt;
+        })()}
+      />
+      
+      <DeleteModal
+        isOpen={deleteModalState.isOpen}
+        onClose={() => setDeleteModalState({ isOpen: false, itemName: "", isFolder: false })}
+        onConfirm={() => {
+          if (deleteModalState.isFolder) {
+            handleDeleteFolder(deleteModalState.itemName);
+          } else {
+            handleDeleteFile(deleteModalState.itemName, () => {
+              if (previewFile?.name === deleteModalState.itemName) setPreviewFile(null);
+            });
+          }
+          setDeleteModalState({ isOpen: false, itemName: "", isFolder: false });
+        }}
+        assetName={(() => {
+          const name = deleteModalState.itemName;
+          if (deleteModalState.isFolder) return name;
+          const underscoreIdx = name.indexOf("_");
+          return underscoreIdx !== -1 ? name.substring(underscoreIdx + 1) : name;
+        })()}
+        isFolder={deleteModalState.isFolder}
+      />
+
+      <MoveModal
+        isOpen={moveModalState.isOpen}
+        onClose={() => setMoveModalState({ isOpen: false, itemName: "" })}
+        onConfirm={(dest) => {
+          handleMoveFile(moveModalState.itemName, dest, () => {
+            if (previewFile?.name === moveModalState.itemName) setPreviewFile(null);
+          });
+          setMoveModalState({ isOpen: false, itemName: "" });
+        }}
+        currentPath={currentFolder}
+        folders={allFolders}
+      />
     </main>
   );
 }

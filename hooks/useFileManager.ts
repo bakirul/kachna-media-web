@@ -8,6 +8,25 @@ export const useFileManager = (user: any, currentFolder: string) => {
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [allFolders, setAllFolders] = useState<string[]>([]);
+
+  const fetchAllFolders = useCallback(async () => {
+    const folders: string[] = [];
+    const getFolders = async (path: string, prefix: string) => {
+      const { data } = await supabase.storage.from("client-vault").list(path);
+      if (data) {
+        for (const item of data) {
+          if (!item.id && item.name !== ".emptyFolderPlaceholder" && item.name !== ".keep") {
+            const folderPath = prefix ? `${prefix}/${item.name}` : item.name;
+            folders.push(folderPath);
+            await getFolders(`${path}/${item.name}`, folderPath);
+          }
+        }
+      }
+    };
+    await getFolders("shared", "");
+    setAllFolders(folders);
+  }, [supabase]);
 
   const fetchFiles = useCallback(
     async (userId: string, folderPath: string) => {
@@ -49,15 +68,16 @@ export const useFileManager = (user: any, currentFolder: string) => {
     [supabase],
   );
 
-  // 🚀 FIX: পেজ লোড বা ইউজার চেঞ্জ হলে অটোমেটিকভাবে ফাইল ফেচ করবে
   useEffect(() => {
     if (user?.id) {
       fetchFiles(user.id, currentFolder);
+      fetchAllFolders();
     } else {
       setVaultItems([]);
       setFileUrls({});
+      setAllFolders([]);
     }
-  }, [user, currentFolder, fetchFiles]);
+  }, [user, currentFolder, fetchFiles, fetchAllFolders]);
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0 || !user) return;
@@ -135,10 +155,6 @@ export const useFileManager = (user: any, currentFolder: string) => {
     fileName: string,
     clearPreview: () => void,
   ) => {
-    if (
-      !window.confirm("Are you sure you want to delete this file permanently?")
-    )
-      return;
     const filePath = getFilePath(fileName);
     const { error } = await supabase.storage
       .from("client-vault")
@@ -146,11 +162,13 @@ export const useFileManager = (user: any, currentFolder: string) => {
     if (!error) {
       clearPreview();
       fetchFiles(user.id, currentFolder);
+      fetchAllFolders();
     } else alert("Error deleting file: " + error.message);
   };
 
   const handleRenameFile = async (
     oldName: string,
+    newCleanName: string,
     clearPreview: () => void,
   ) => {
     const underscoreIdx = oldName.indexOf("_");
@@ -159,17 +177,7 @@ export const useFileManager = (user: any, currentFolder: string) => {
     const actualNameWithExt =
       underscoreIdx !== -1 ? oldName.substring(underscoreIdx + 1) : oldName;
     const dotIdx = actualNameWithExt.lastIndexOf(".");
-    const actualNameOnly =
-      dotIdx !== -1
-        ? actualNameWithExt.substring(0, dotIdx)
-        : actualNameWithExt;
     const ext = dotIdx !== -1 ? actualNameWithExt.substring(dotIdx) : "";
-
-    const newCleanName = prompt(
-      "Enter new name for this file:",
-      actualNameOnly,
-    );
-    if (!newCleanName || newCleanName.trim() === "") return;
 
     const newName = `${prefix}${newCleanName.trim()}${ext}`;
     const oldPath = getFilePath(oldName);
@@ -186,6 +194,27 @@ export const useFileManager = (user: any, currentFolder: string) => {
     } else alert("Error renaming file: " + error.message);
   };
 
+  const handleMoveFile = async (
+    fileName: string,
+    destinationFolder: string,
+    clearPreview: () => void,
+  ) => {
+    const oldPath = getFilePath(fileName);
+    const newPath = destinationFolder
+      ? `shared/${destinationFolder}/${fileName}`
+      : `shared/${fileName}`;
+
+    if (oldPath === newPath) return;
+
+    const { error } = await supabase.storage
+      .from("client-vault")
+      .move(oldPath, newPath);
+    if (!error) {
+      clearPreview();
+      fetchFiles(user.id, currentFolder);
+    } else alert("Error moving file: " + error.message);
+  };
+
   const handleCreateFolder = async () => {
     if (!user) return;
     const folderName = prompt("Enter new folder name:");
@@ -197,23 +226,30 @@ export const useFileManager = (user: any, currentFolder: string) => {
       .from("client-vault")
       .upload(targetPath, new Blob([""]));
     fetchFiles(user.id, currentFolder);
+    fetchAllFolders();
   };
 
   const handleDeleteFolder = async (folderName: string) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete the folder "${folderName}"? (Make sure it is empty)`,
-      )
-    )
-      return;
     const folderPath = currentFolder
       ? `shared/${currentFolder}/${folderName}`
       : `shared/${folderName}`;
-    const { error } = await supabase.storage
-      .from("client-vault")
-      .remove([`${folderPath}/.keep`]);
-    if (!error) fetchFiles(user.id, currentFolder);
-    else alert("Could not delete folder. Ensure no other files remain inside.");
+      
+    const deleteRecursive = async (path: string) => {
+      const { data } = await supabase.storage.from("client-vault").list(path);
+      if (!data) return;
+      for (const item of data) {
+        if (item.id) {
+          await supabase.storage.from("client-vault").remove([`${path}/${item.name}`]);
+        } else {
+          await deleteRecursive(`${path}/${item.name}`);
+        }
+      }
+      await supabase.storage.from("client-vault").remove([`${path}/.keep`]);
+    };
+
+    await deleteRecursive(folderPath);
+    fetchFiles(user.id, currentFolder);
+    fetchAllFolders();
   };
 
   return {
@@ -221,11 +257,13 @@ export const useFileManager = (user: any, currentFolder: string) => {
     fileUrls,
     uploading,
     uploadProgress,
+    allFolders,
     fetchFiles,
     handleUpload,
     getSignedUrl,
     handleDeleteFile,
     handleRenameFile,
+    handleMoveFile,
     handleCreateFolder,
     handleDeleteFolder,
   };

@@ -30,8 +30,24 @@ export default function VaultSidebar({
 
       <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
         <button onClick={onRootClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors ${currentFolder === "" ? "bg-[#d4af37]/10 text-[#d4af37]" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}>
-          <span className="text-lg">🏠</span> Root Vault
+          <span className="text-lg">🏠</span> CLIENT VAULT
         </button>
+
+        {pathParts.length > 0 && (
+          <button 
+            onClick={() => {
+              const parentPath = pathParts.slice(0, -1).join("/");
+              if (parentPath === "") {
+                onRootClick();
+              } else {
+                onFolderClick(parentPath);
+              }
+            }} 
+            className="w-full flex items-center gap-3 px-3 py-2 mt-1 rounded-md text-[11px] font-bold uppercase tracking-widest text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+          >
+            <span className="text-sm">←</span> Go Back
+          </button>
+        )}
 
         {pathParts.map((part, idx) => {
           const path = pathParts.slice(0, idx + 1).join("/");

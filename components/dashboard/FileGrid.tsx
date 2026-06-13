@@ -8,6 +8,7 @@ interface FileGridProps {
   onPreview: (fileName: string) => void;
   onRenameFile: (fileName: string) => void;
   onDeleteFile: (fileName: string) => void;
+  onMoveFile?: (fileName: string) => void;
 }
 
 export default function FileGrid({
@@ -16,6 +17,7 @@ export default function FileGrid({
   onPreview,
   onRenameFile,
   onDeleteFile,
+  onMoveFile,
 }: FileGridProps) {
   const { viewSettings, previewFile } = useDashboardStore();
 
@@ -84,8 +86,18 @@ export default function FileGrid({
 
             {viewSettings.showCardInfo && (
               <div className="p-3 border-t border-white/5 relative group/card">
-                <p className="text-xs truncate pr-12">{originalName}</p>
-                <div className="absolute right-2 bottom-2 flex items-center gap-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity bg-[#121217] pl-2">
+                <p className="text-xs truncate pr-16">{originalName}</p>
+                <div className="absolute right-2 bottom-2 flex items-center gap-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity bg-[#121217] pl-2 rounded-tl-md">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMoveFile?.(item.name);
+                    }}
+                    className="p-1 text-gray-400 hover:text-[#3b82f6] transition-colors"
+                    title="Move"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="19 9 22 12 19 15"></polyline><polyline points="9 19 12 22 15 19"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
