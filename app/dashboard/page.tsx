@@ -59,6 +59,10 @@ export default function DashboardPage() {
     viewSettings,
     leftPaneWidth,
     setLeftPaneWidth,
+    sidebarWidth,
+    setSidebarWidth,
+    viewMode,
+    setViewMode,
     isSidebarOpen,
     setIsSidebarOpen,
     currentFolder,
@@ -82,6 +86,34 @@ export default function DashboardPage() {
   } = useDashboardStore();
 
   const isResizingLeft = useRef(false);
+  const isResizingSidebar = useRef(false);
+
+  // Sidebar Resize Handlers
+  const handleMouseMoveSidebar = useCallback((e: MouseEvent) => {
+    if (!isResizingSidebar.current) return;
+    let newWidth = e.clientX;
+    if (newWidth < 200) newWidth = 200;
+    if (newWidth > 600) newWidth = 600;
+    setSidebarWidth(newWidth);
+  }, [setSidebarWidth]);
+
+  const stopResizingSidebar = useCallback(() => {
+    isResizingSidebar.current = false;
+    document.body.style.cursor = "default";
+    document.removeEventListener("mousemove", handleMouseMoveSidebar);
+    document.removeEventListener("mouseup", stopResizingSidebar);
+  }, [handleMouseMoveSidebar]);
+
+  const startResizingSidebar = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isResizingSidebar.current = true;
+      document.body.style.cursor = "col-resize";
+      document.addEventListener("mousemove", handleMouseMoveSidebar);
+      document.addEventListener("mouseup", stopResizingSidebar);
+    },
+    [handleMouseMoveSidebar, stopResizingSidebar],
+  );
 
   // Fetch feature flags
   const { flags } = useFeatureFlags(user?.id);
@@ -726,12 +758,13 @@ export default function DashboardPage() {
               className={`
                 fixed md:relative inset-y-0 left-0 z-40 md:z-20
                 h-full shrink-0 bg-[#0a0a0f] border-r border-white/5
-                transition-all duration-300 ease-in-out
+                ${isSidebarOpen && !isResizingSidebar.current ? "transition-all duration-300 ease-in-out" : ""}
                 ${isSidebarOpen 
-                  ? "w-60 translate-x-0 opacity-100" 
-                  : "w-60 md:w-0 -translate-x-full md:translate-x-0 md:opacity-0 overflow-hidden md:border-r-0 pointer-events-none"
+                  ? "translate-x-0 opacity-100" 
+                  : "md:w-0 -translate-x-full md:translate-x-0 md:opacity-0 overflow-hidden md:border-r-0 pointer-events-none"
                 }
               `}
+              style={{ width: isSidebarOpen ? (window.innerWidth >= 768 ? `${sidebarWidth}px` : "240px") : "0px" }}
             >
               <VaultSidebar
                 currentFolder={currentFolder}
@@ -740,6 +773,10 @@ export default function DashboardPage() {
                 onRootClick={() => setCurrentFolder("")}
                 onCreateFolder={handleCreateFolder}
                 onDeleteFolder={onDeleteFolderUI}
+              />
+              <div
+                onMouseDown={startResizingSidebar}
+                className="absolute top-0 right-0 w-[4px] h-full cursor-col-resize hover:bg-[#d4af37]/50 active:bg-[#d4af37] z-50 hidden md:block transition-colors"
               />
             </div>
 
@@ -751,15 +788,26 @@ export default function DashboardPage() {
                 className={`flex flex-col bg-[#050505] shrink-0 h-full relative transition-none custom-scrollbar ${previewFile ? "hidden lg:flex" : "flex"}`}
                 style={{ width: previewFile ? `${leftPaneWidth}%` : "100%" }}
               >
-                <div className="h-14 flex flex-col md:flex-row items-center justify-between px-6 border-b border-white/5 bg-[#121217] shrink-0 z-20 relative">
+                <div className="h-14 flex flex-col md:flex-row items-center justify-start gap-4 md:gap-6 px-6 border-b border-white/5 bg-[#121217] shrink-0 z-20 relative">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-medium text-gray-200">
+                    <h2 className="text-sm font-medium text-gray-200 whitespace-nowrap">
                       {currentFolder
                         ? currentFolder.split("/").pop()
                         : "All Assets"}
                     </h2>
                   </div>
                   <div className="flex items-center gap-3">
+                    <div className="flex items-center bg-[#050505] border border-white/10 rounded-md p-0.5 shadow-inner">
+                      <button onClick={() => setViewMode('list')} className={`p-1.5 rounded transition-all ${viewMode === 'list' ? 'bg-white/10 text-[#d4af37] shadow-sm' : 'text-gray-500 hover:text-white hover:bg-white/5'}`} title="List View">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                      </button>
+                      <button onClick={() => setViewMode('grid-sm')} className={`p-1.5 rounded transition-all ${viewMode === 'grid-sm' ? 'bg-white/10 text-[#d4af37] shadow-sm' : 'text-gray-500 hover:text-white hover:bg-white/5'}`} title="Small Grid">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                      </button>
+                      <button onClick={() => setViewMode('grid-lg')} className={`p-1.5 rounded transition-all ${viewMode === 'grid-lg' ? 'bg-white/10 text-[#d4af37] shadow-sm' : 'text-gray-500 hover:text-white hover:bg-white/5'}`} title="Large Grid">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="21"></line></svg>
+                      </button>
+                    </div>
                     <input
                       type="text"
                       placeholder="Search..."
@@ -773,6 +821,9 @@ export default function DashboardPage() {
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                   <FileGrid
                     filteredFiles={filteredFiles}
+                    folders={folders}
+                    currentFolder={currentFolder}
+                    onFolderClick={setCurrentFolder}
                     fileUrls={fileUrls}
                     onPreview={handlePreview}
                     onRenameFile={onRenameFile}

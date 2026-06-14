@@ -1,5 +1,6 @@
 // components/VaultSidebar.tsx
 import React from "react";
+import GlobalLiveWidget from "./GlobalLiveWidget";
 
 interface SidebarProps {
   currentFolder: string;
@@ -13,7 +14,7 @@ interface SidebarProps {
 export default function VaultSidebar({ 
   currentFolder, folders, onFolderClick, onRootClick, onCreateFolder, onDeleteFolder 
 }: SidebarProps) {
-  const pathParts = currentFolder ? currentFolder.split("/") : [];
+  const pathParts = currentFolder ? currentFolder.split("/").filter(Boolean) : [];
 
   return (
     <aside className="w-full h-full bg-[#0a0a0f] flex flex-col shrink-0">
@@ -53,7 +54,7 @@ export default function VaultSidebar({
           const path = pathParts.slice(0, idx + 1).join("/");
           return (
             <div key={path} className="pl-4 mt-1">
-              <button onClick={() => onFolderClick(path)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors ${currentFolder === path ? "bg-[#d4af37]/10 text-[#d4af37]" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}>
+              <button onClick={() => onFolderClick(path)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors ${currentFolder === path || currentFolder === path + "/" ? "bg-[#d4af37]/10 text-[#d4af37]" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}>
                 <span className="text-lg">📂</span> {part}
               </button>
             </div>
@@ -65,7 +66,7 @@ export default function VaultSidebar({
             <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2 px-3">Subfolders</p>
             {folders.map((f) => (
               <div key={f.name} className="group/folder flex items-center justify-between rounded-md text-xs font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-colors pr-2">
-                <button onClick={() => onFolderClick(f.name)} className="flex-1 flex items-center gap-3 px-3 py-2 text-left truncate">
+                <button onClick={() => onFolderClick(currentFolder ? `${currentFolder.replace(/\/$/, '')}/${f.name}` : f.name)} className="flex-1 flex items-center gap-3 px-3 py-2 text-left truncate">
                   <span className="text-lg">📁</span> <span className="truncate">{f.name}</span>
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); onDeleteFolder(f.name); }} className="opacity-0 group-hover/folder:opacity-100 p-1 text-gray-500 hover:text-red-400 transition-all" title="Delete Folder">
@@ -75,6 +76,9 @@ export default function VaultSidebar({
             ))}
           </div>
         )}
+      </div>
+      <div className="p-4 border-t border-white/5 shrink-0 bg-[#050505]">
+        <GlobalLiveWidget isEmbedded={true} />
       </div>
     </aside>
   );

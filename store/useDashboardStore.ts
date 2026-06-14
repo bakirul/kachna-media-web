@@ -17,10 +17,14 @@ interface DashboardState {
   // View Settings
   viewSettings: ViewSettings;
   setViewSettings: (settings: Partial<ViewSettings>) => void;
+  viewMode: 'list' | 'grid-sm' | 'grid-lg';
+  setViewMode: (mode: 'list' | 'grid-sm' | 'grid-lg') => void;
 
   // Layout State
   leftPaneWidth: number;
   setLeftPaneWidth: (width: number) => void;
+  sidebarWidth: number;
+  setSidebarWidth: (width: number) => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (isOpen: boolean) => void;
   isLiveMinimized: boolean;
@@ -66,9 +70,15 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   },
   setViewSettings: (settings) =>
     set((state) => ({ viewSettings: { ...state.viewSettings, ...settings } })),
+  
+  viewMode: 'grid-lg',
+  setViewMode: (mode) => set({ viewMode: mode }),
 
   leftPaneWidth: 35,
   setLeftPaneWidth: (width) => set({ leftPaneWidth: width }),
+  
+  sidebarWidth: 240,
+  setSidebarWidth: (width) => set({ sidebarWidth: width }),
   
   isSidebarOpen: true,
   setIsSidebarOpen: (isOpen) => set({ isSidebarOpen: isOpen }),

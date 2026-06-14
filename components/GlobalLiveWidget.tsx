@@ -7,7 +7,7 @@ import { io, Socket } from "socket.io-client";
 import LiveSessionWidget from "./LiveSessionWidget"; // আপনার মূল উইজেট
 import GlobalMicWidget from "./GlobalMicWidget"; // Import Global STT Widget
 
-export default function GlobalLiveWidget() {
+export default function GlobalLiveWidget({ isEmbedded = false }: { isEmbedded?: boolean }) {
   const [user, setUser] = useState<any>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +63,9 @@ export default function GlobalLiveWidget() {
   // পেজ লোড হওয়ার সময় কিছু দেখাবে না
   if (loading) return null;
 
+  // ড্যাশবোর্ডে ফ্লোটিং ভার্সন হাইড করো (যেহেতু এটা সাইডবারে এমবেড করা হচ্ছে)
+  if (!isEmbedded && pathname === '/dashboard') return null;
+
   // 🚀 যদি ইউজার লগইন করা না থাকে (Fake/Global Button)
   if (!user) {
     return (
@@ -93,8 +96,12 @@ export default function GlobalLiveWidget() {
 
   // Removed dashboard conditional rendering to allow global Live Session across entire app
 
+  const containerClass = isEmbedded
+    ? "flex flex-col gap-2 w-full mt-auto"
+    : "fixed bottom-6 left-6 z-[100] [&>div]:!bottom-0 [&>div]:!left-0 [&>div]:!right-auto [&>div]:!items-start flex flex-col gap-2";
+
   return (
-    <div className="fixed bottom-6 left-6 z-[100] [&>div]:!bottom-0 [&>div]:!left-0 [&>div]:!right-auto [&>div]:!items-start flex flex-col gap-2">
+    <div className={containerClass}>
       {socket && (
         <>
           <LiveSessionWidget socket={socket} roomId="global-lobby" user={user} />
