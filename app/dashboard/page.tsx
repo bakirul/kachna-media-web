@@ -764,7 +764,7 @@ export default function DashboardPage() {
                   : "md:w-0 -translate-x-full md:translate-x-0 md:opacity-0 overflow-hidden md:border-r-0 pointer-events-none"
                 }
               `}
-              style={{ width: isSidebarOpen ? (window.innerWidth >= 768 ? `${sidebarWidth}px` : "240px") : "0px" }}
+              style={{ width: isSidebarOpen ? ((typeof window !== "undefined" && window.innerWidth >= 768) ? `${sidebarWidth}px` : "240px") : "0px" }}
             >
               <VaultSidebar
                 currentFolder={currentFolder}
@@ -788,7 +788,7 @@ export default function DashboardPage() {
                 className={`flex flex-col bg-[#050505] shrink-0 h-full relative transition-none custom-scrollbar ${previewFile ? "hidden lg:flex" : "flex"}`}
                 style={{ width: previewFile ? `${leftPaneWidth}%` : "100%" }}
               >
-                <div className="h-14 flex flex-col md:flex-row items-center justify-start gap-4 md:gap-6 px-6 border-b border-white/5 bg-[#121217] shrink-0 z-20 relative">
+                <div className="w-full h-14 flex items-center justify-between px-6 border-b border-white/5 bg-[#121217] shrink-0 z-20 relative">
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-medium text-gray-200 whitespace-nowrap">
                       {currentFolder
@@ -796,7 +796,7 @@ export default function DashboardPage() {
                         : "All Assets"}
                     </h2>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     <div className="flex items-center bg-[#050505] border border-white/10 rounded-md p-0.5 shadow-inner">
                       <button onClick={() => setViewMode('list')} className={`p-1.5 rounded transition-all ${viewMode === 'list' ? 'bg-white/10 text-[#d4af37] shadow-sm' : 'text-gray-500 hover:text-white hover:bg-white/5'}`} title="List View">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>

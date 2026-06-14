@@ -76,10 +76,10 @@ export default function FileGrid({
         return (
           <div
             key={f.name}
-            className="bg-[#121217] rounded-lg border overflow-hidden relative group cursor-pointer border-white/5 hover:border-[#d4af37]/50 transition-colors"
+            className="bg-[#121217] rounded-lg border overflow-hidden relative group cursor-pointer border-white/5 hover:border-[#d4af37]/50 transition-colors flex flex-col"
             onClick={() => onFolderClick?.(currentFolder ? `${currentFolder.replace(/\/$/, '')}/${f.name}` : f.name)}
           >
-            <div className={`w-full bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden ${aspectClass}`}>
+            <div className="w-full bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden h-24 shrink-0">
               <span className="text-4xl group-hover:scale-110 transition-transform duration-300">📁</span>
             </div>
             {viewSettings.showCardInfo && (
