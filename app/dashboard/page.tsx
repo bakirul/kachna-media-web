@@ -764,7 +764,7 @@ export default function DashboardPage() {
                   : "md:w-0 -translate-x-full md:translate-x-0 md:opacity-0 overflow-hidden md:border-r-0 pointer-events-none"
                 }
               `}
-              style={{ width: isSidebarOpen ? ((typeof window !== "undefined" && window.innerWidth >= 768) ? `${sidebarWidth}px` : "240px") : "0px" }}
+              style={{ width: isSidebarOpen ? (typeof window !== "undefined" && window.innerWidth >= 768 ? sidebarWidth + "px" : "240px") : "0px" }}
             >
               <VaultSidebar
                 currentFolder={currentFolder}
@@ -786,7 +786,7 @@ export default function DashboardPage() {
             >
               <section
                 className={`flex flex-col bg-[#050505] shrink-0 h-full relative transition-none custom-scrollbar ${previewFile ? "hidden lg:flex" : "flex"}`}
-                style={{ width: previewFile ? `${leftPaneWidth}%` : "100%" }}
+                style={{ width: `${leftPaneWidth}%` }}
               >
                 <div className="w-full h-14 flex items-center justify-between px-6 border-b border-white/5 bg-[#121217] shrink-0 z-20 relative">
                   <div className="flex items-center gap-2">
@@ -833,17 +833,16 @@ export default function DashboardPage() {
                 </div>
               </section>
 
-              {previewFile && (
-                <div
-                  onMouseDown={startResizingLeft}
-                  className="w-[3px] bg-white/5 hover:bg-[#d4af37] cursor-col-resize z-50 shrink-0 hidden lg:block"
-                />
-              )}
+              <div
+                onMouseDown={startResizingLeft}
+                className="w-[3px] bg-white/5 hover:bg-[#d4af37] cursor-col-resize z-50 shrink-0 hidden lg:block"
+              />
 
-              {previewFile && (
-                <div className="flex flex-1 flex-col h-full bg-[#0a0a0f] overflow-hidden relative min-w-0">
-                  {previewFile.isVideo && (
-                    <div className="w-full bg-[#1c1c24] border-b border-[#d4af37]/20 p-2 lg:p-3 flex flex-col md:flex-row flex-wrap items-start md:items-center justify-between z-30 shrink-0 shadow-md gap-3">
+              <div className={`flex flex-1 flex-col h-full bg-[#0a0a0f] overflow-hidden relative min-w-0 ${!previewFile ? "hidden lg:flex" : "flex"}`}>
+                {previewFile ? (
+                  <>
+                    {previewFile.isVideo && (
+                      <div className="w-full bg-[#1c1c24] border-b border-[#d4af37]/20 p-2 lg:p-3 flex flex-col md:flex-row flex-wrap items-start md:items-center justify-between z-30 shrink-0 shadow-md gap-3">
                       <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0">
                         <button
                           onClick={() => setPreviewFile(null)}
@@ -1153,28 +1152,35 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    {previewFile.isVideo && (
-                      <div className="w-full lg:w-[320px] shrink-0 bg-[#121217] border-t lg:border-t-0 lg:border-l border-white/5 z-40 flex flex-col min-h-[500px] lg:min-h-0 lg:h-full">
-                        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-                          <CommentsPanel
-                            isLive={isLive}
-                            comments={comments}
-                            newComment={newComment}
-                            setNewComment={setNewComment}
-                            handleAddComment={handleAddComment}
-                            handleEditComment={handleEditComment}
-                            handleDeleteComment={handleDeleteComment}
-                            handleNotifyTeam={handleNotifyTeam}
-                            isNotifying={isNotifying}
-                            notificationSent={notificationSent}
-                            jumpToTime={jumpToTime}
-                          />
+                      {previewFile.isVideo && (
+                        <div className="w-full lg:w-[320px] shrink-0 bg-[#121217] border-t lg:border-t-0 lg:border-l border-white/5 z-40 flex flex-col min-h-[500px] lg:min-h-0 lg:h-full">
+                          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+                            <CommentsPanel
+                              isLive={isLive}
+                              comments={comments}
+                              newComment={newComment}
+                              setNewComment={setNewComment}
+                              handleAddComment={handleAddComment}
+                              handleEditComment={handleEditComment}
+                              handleDeleteComment={handleDeleteComment}
+                              handleNotifyTeam={handleNotifyTeam}
+                              isNotifying={isNotifying}
+                              notificationSent={notificationSent}
+                              jumpToTime={jumpToTime}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </section>
-                </div>
-              )}
+                      )}
+                    </section>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center w-full h-full text-gray-500 bg-[#0a0a0f] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/5 via-transparent to-transparent opacity-50 pointer-events-none"></div>
+                    <span className="text-6xl mb-6 opacity-20 drop-shadow-2xl">🎞️</span>
+                    <p className="text-xs font-bold tracking-widest uppercase text-gray-500/50">Select an asset to preview</p>
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
