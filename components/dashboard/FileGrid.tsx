@@ -4,10 +4,6 @@ import { useDashboardStore } from "@/store/useDashboardStore";
 
 interface FileGridProps {
   filteredFiles: any[];
-  folders?: any[];
-  currentFolder?: string;
-  onFolderClick?: (folderName: string) => void;
-  fileUrls: Record<string, string>;
   onPreview: (fileName: string) => void;
   onRenameFile: (fileName: string) => void;
   onDeleteFile: (fileName: string) => void;
@@ -16,9 +12,6 @@ interface FileGridProps {
 
 export default function FileGrid({
   filteredFiles,
-  folders,
-  currentFolder,
-  onFolderClick,
   fileUrls,
   onPreview,
   onRenameFile,
@@ -52,44 +45,6 @@ export default function FileGrid({
 
   return (
     <div className={containerClass} style={gridStyle}>
-      {(folders || []).map((f) => {
-        if (!f?.name) return null;
-        
-        if (viewMode === 'list') {
-          return (
-            <div
-              key={f.name}
-              className="bg-[#121217] rounded-md border flex items-center p-2 relative group cursor-pointer hover:bg-white/5 transition-colors border-white/5"
-              onClick={() => onFolderClick?.(currentFolder ? `${currentFolder.replace(/\/$/, '')}/${f.name}` : f.name)}
-            >
-              <div className="w-16 h-10 bg-[#0a0a0f] flex items-center justify-center shrink-0 rounded overflow-hidden mr-4">
-                <span className="text-xl">📁</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-200 truncate font-semibold uppercase tracking-wider">{f.name}</p>
-              </div>
-            </div>
-          );
-        }
-
-        // Grid View
-        return (
-          <div
-            key={f.name}
-            className="bg-[#121217] rounded-lg border overflow-hidden relative group cursor-pointer border-white/5 hover:border-[#d4af37]/50 transition-colors flex flex-col"
-            onClick={() => onFolderClick?.(currentFolder ? `${currentFolder.replace(/\/$/, '')}/${f.name}` : f.name)}
-          >
-            <div className="w-full bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden h-24 shrink-0">
-              <span className="text-4xl group-hover:scale-110 transition-transform duration-300">📁</span>
-            </div>
-            {viewSettings.showCardInfo && (
-              <div className="p-3 border-t border-white/5 relative group/card bg-[#121217]">
-                <p className={`truncate font-semibold uppercase tracking-wider ${viewMode === 'grid-sm' ? 'text-[10px]' : 'text-xs'}`}>{f.name}</p>
-              </div>
-            )}
-          </div>
-        );
-      })}
 
       {(filteredFiles || []).map((item) => {
         if (!item?.name) return null;

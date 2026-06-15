@@ -768,7 +768,7 @@ export default function DashboardPage() {
             >
               <VaultSidebar
                 currentFolder={currentFolder}
-                folders={folders}
+                allFolders={allFolders}
                 onFolderClick={setCurrentFolder}
                 onRootClick={() => setCurrentFolder("")}
                 onCreateFolder={handleCreateFolder}
@@ -821,9 +821,7 @@ export default function DashboardPage() {
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                   <FileGrid
                     filteredFiles={filteredFiles}
-                    folders={folders}
                     currentFolder={currentFolder}
-                    onFolderClick={setCurrentFolder}
                     fileUrls={fileUrls}
                     onPreview={handlePreview}
                     onRenameFile={onRenameFile}
