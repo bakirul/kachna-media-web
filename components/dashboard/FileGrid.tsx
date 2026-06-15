@@ -4,6 +4,8 @@ import { useDashboardStore } from "@/store/useDashboardStore";
 
 interface FileGridProps {
   filteredFiles: any[];
+  currentFolder?: string;
+  fileUrls: Record<string, string>;
   onPreview: (fileName: string) => void;
   onRenameFile: (fileName: string) => void;
   onDeleteFile: (fileName: string) => void;
@@ -12,6 +14,7 @@ interface FileGridProps {
 
 export default function FileGrid({
   filteredFiles,
+  currentFolder,
   fileUrls,
   onPreview,
   onRenameFile,
