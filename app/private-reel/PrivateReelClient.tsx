@@ -106,7 +106,7 @@ export default function PrivateReelClient({
             </form>
 
             <p className="text-[9px] text-text-gray/50 uppercase tracking-widest mt-8">
-              Protected by Kachna Media Security
+              Protected by Rendorax Security
             </p>
           </div>
         ) : (
@@ -140,7 +140,7 @@ export default function PrivateReelClient({
               </div>
 
               <div className="absolute bottom-6 right-6 z-10 text-[10px] font-mono uppercase tracking-[0.2em] text-white/30">
-                Kachna Media Internal
+                Rendorax Internal
               </div>
             </div>
 

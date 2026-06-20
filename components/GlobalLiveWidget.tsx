@@ -1,11 +1,10 @@
-// components/GlobalLiveWidget.tsx
 "use client";
 import React, { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter, usePathname } from "next/navigation";
 import { io, Socket } from "socket.io-client";
-import LiveSessionWidget from "./LiveSessionWidget"; // আপনার মূল উইজেট
-import GlobalMicWidget from "./GlobalMicWidget"; // Import Global STT Widget
+import LiveSessionWidget from "./LiveSessionWidget";
+import LiveSessionToolbar from "./dashboard/LiveSessionToolbar";
 
 export default function GlobalLiveWidget({ isEmbedded = false }: { isEmbedded?: boolean }) {
   const [user, setUser] = useState<any>(null);
@@ -102,11 +101,9 @@ export default function GlobalLiveWidget({ isEmbedded = false }: { isEmbedded?: 
 
   return (
     <div className={containerClass}>
+      {!isEmbedded && <LiveSessionToolbar />}
       {socket && (
-        <>
-          <LiveSessionWidget socket={socket} roomId="global-lobby" user={user} />
-          <GlobalMicWidget socket={socket} user={user} />
-        </>
+        <LiveSessionWidget socket={socket} roomId="global-lobby" user={user} />
       )}
     </div>
   );

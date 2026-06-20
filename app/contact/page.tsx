@@ -75,7 +75,7 @@ export default function ContactPage() {
                 Transmission Successful
               </h3>
               <p className="text-sm text-text-gray font-light max-w-md mx-auto">
-                Your briefing has been securely delivered to Kachna Media
+                Your briefing has been securely delivered to Rendorax
                 Operations. We will be in touch shortly.
               </p>
               <button

@@ -1,6 +1,13 @@
 "use client";
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { useDashboardStore } from "@/store/useDashboardStore";
+import type { GallerySelectableAsset } from "@/store/useDashboardStore";
+import { useGalleryViewStyles } from "@/hooks/useGalleryViewStyles";
+import AssetContextMenu from "@/components/dashboard/AssetContextMenu";
+import GallerySelectCheckbox from "@/components/dashboard/GallerySelectCheckbox";
+import GallerySelectAllToggle from "@/components/dashboard/GallerySelectAllToggle";
+import GalleryMarqueeContainer from "@/components/dashboard/GalleryMarqueeContainer";
+import { inferMimeTypeFromFileName } from "@/utils/mediaTypes";
 
 interface FileGridProps {
   filteredFiles: any[];
@@ -21,49 +28,147 @@ export default function FileGrid({
   onDeleteFile,
   onMoveFile,
 }: FileGridProps) {
-  const { viewSettings, previewFile, viewMode } = useDashboardStore();
+  const {
+    previewFile,
+    selectGalleryRange,
+    toggleGalleryAssetSelection,
+    setGallerySelectionAnchorId,
+  } = useDashboardStore();
+  const {
+    aspectClass,
+    objectFitClass,
+    containerClass,
+    gridStyle,
+    showCardInfo,
+    viewMode,
+  } = useGalleryViewStyles();
 
-  const aspectClass =
-    viewSettings.aspectRatio === "video"
-      ? "aspect-video"
-      : viewSettings.aspectRatio === "square"
-        ? "aspect-square"
-        : "aspect-[9/16]";
+  const toSelectableAsset = useCallback(
+    (item: { id?: string; name: string; metadata?: { size?: number } }, originalName: string, fileUrl?: string): GallerySelectableAsset => ({
+      id: item.id ?? item.name,
+      source: "vault",
+      fileName: originalName,
+      fileSize: item.metadata?.size ?? null,
+      mimeType: inferMimeTypeFromFileName(originalName),
+      vaultDownloadUrl: fileUrl,
+      previewKey: item.name,
+    }),
+    [],
+  );
 
-  const objectFitClass =
-    viewSettings.thumbnailScale === "Fill" ? "object-cover" : "object-contain";
+  const files = (filteredFiles || []).filter((item) => item?.name);
 
-  // Grid styling based on viewMode
-  let containerClass = "grid gap-6";
-  let gridStyle = {};
-  
-  if (viewMode === 'list') {
-    containerClass = "flex flex-col gap-2";
-  } else if (viewMode === 'grid-sm') {
-    gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(140px, 1fr))` };
-  } else {
-    // grid-lg
-    gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(240px, 1fr))` };
+  const visibleSelectableAssets = useMemo(
+    () =>
+      files
+        .filter((item) => item.id)
+        .map((item) => {
+          const originalName = item.name.substring(item.name.indexOf("_") + 1);
+          return toSelectableAsset(item, originalName, fileUrls?.[item.name]);
+        }),
+    [files, fileUrls, toSelectableAsset],
+  );
+
+  const handleCardPointerSelect = useCallback(
+    (
+      event: React.MouseEvent,
+      selectable: GallerySelectableAsset,
+      onDefault?: () => void,
+    ) => {
+      if (event.shiftKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        selectGalleryRange(visibleSelectableAssets, selectable.id);
+        return;
+      }
+
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleGalleryAssetSelection(selectable);
+        setGallerySelectionAnchorId(selectable.id);
+        return;
+      }
+
+      setGallerySelectionAnchorId(selectable.id);
+      onDefault?.();
+    },
+    [
+      selectGalleryRange,
+      setGallerySelectionAnchorId,
+      toggleGalleryAssetSelection,
+      visibleSelectableAssets,
+    ],
+  );
+
+  if (files.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-white/10 bg-[#0a0a0f]/60 px-6 py-10 text-center">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-gray-400">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect width="20" height="5" x="2" y="3" rx="1" />
+            <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+            <path d="M10 12h4" />
+          </svg>
+        </div>
+        <p className="text-sm font-medium text-gray-300">
+          No Vault Local Storage assets in this folder
+        </p>
+        <p className="mt-1 text-xs text-gray-500">
+          Upload to Local Storage saves files to the active directory.
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className={containerClass} style={gridStyle}>
+    <div>
+      <GallerySelectAllToggle visibleAssets={visibleSelectableAssets} />
+      <GalleryMarqueeContainer
+        visibleAssets={visibleSelectableAssets}
+        containerClass={containerClass}
+        gridStyle={gridStyle}
+      >
 
-      {(filteredFiles || []).map((item) => {
-        if (!item?.name) return null;
+      {files.map((item) => {
         const originalName = item.name.substring(item.name.indexOf("_") + 1);
         const isVideoFile = item.name.match(/\.(mp4|webm|ogg|mov|mxf)$/i);
         const isImage = item.name.match(/\.(jpg|jpeg|png|gif|webp)$/i);
         const isSelected = previewFile?.name === item.name;
         const fileUrl = fileUrls?.[item.name];
+        const selectable = toSelectableAsset(item, originalName, fileUrl);
+        const isSelectableFile = Boolean(item.id);
+        const selectableProps = isSelectableFile
+          ? {
+              "data-gallery-selectable": true,
+              "data-gallery-asset-id": selectable.id,
+            }
+          : {};
 
         if (viewMode === 'list') {
           return (
             <div
-              key={item.id}
-              className={`bg-[#121217] rounded-md border flex items-center p-2 relative group cursor-pointer hover:bg-white/5 transition-colors ${isSelected ? "border-[#d4af37]" : "border-white/5"}`}
-              onClick={() => onPreview(item.name)}
+              key={item.id ?? item.name}
+              {...selectableProps}
+              className={`bg-[#121217] rounded-md border flex items-center gap-3 p-2 relative group cursor-pointer hover:bg-white/5 transition-colors ${isSelected ? "border-[#d4af37]" : "border-white/5"}`}
+              onClick={(e) =>
+                isSelectableFile
+                  ? handleCardPointerSelect(e, selectable, () => onPreview(item.name))
+                  : onPreview(item.name)
+              }
             >
+              {isSelectableFile && <GallerySelectCheckbox asset={selectable} />}
               <div className="w-16 h-10 bg-[#0a0a0f] flex items-center justify-center shrink-0 rounded overflow-hidden mr-4">
                 {fileUrl ? (
                   isVideoFile ? (
@@ -92,6 +197,9 @@ export default function FileGrid({
                 <button onClick={(e) => { e.stopPropagation(); onDeleteFile(item.name); }} className="p-1.5 text-gray-400 hover:text-red-400 transition-colors rounded hover:bg-red-500/20" title="Delete">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
+                {fileUrl && (
+                  <AssetContextMenu asset={selectable} shareUrl={fileUrl} />
+                )}
               </div>
             </div>
           );
@@ -100,13 +208,26 @@ export default function FileGrid({
         // Grid View (sm or lg)
         return (
           <div
-            key={item.id}
+            key={item.id ?? item.name}
+            {...selectableProps}
             className={`bg-[#121217] rounded-lg border overflow-hidden relative group cursor-pointer ${isSelected ? "border-[#d4af37]" : "border-white/5"}`}
-            onClick={() => onPreview(item.name)}
+            onClick={(e) =>
+              isSelectableFile
+                ? handleCardPointerSelect(e, selectable, () => onPreview(item.name))
+                : onPreview(item.name)
+            }
           >
             <div
               className={`w-full bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden ${aspectClass}`}
             >
+              <div className="absolute left-2 top-2 z-20">
+                {isSelectableFile && <GallerySelectCheckbox asset={selectable} />}
+              </div>
+              {fileUrl && (
+                <div className="absolute right-2 top-2 z-20">
+                  <AssetContextMenu asset={selectable} shareUrl={fileUrl} />
+                </div>
+              )}
               {fileUrl ? (
                 isVideoFile ? (
                   <video
@@ -129,7 +250,7 @@ export default function FileGrid({
               )}
             </div>
 
-            {viewSettings.showCardInfo && (
+            {showCardInfo && (
               <div className="p-3 border-t border-white/5 relative group/card">
                 <p className={`truncate pr-16 ${viewMode === 'grid-sm' ? 'text-[10px]' : 'text-xs'}`}>{originalName}</p>
                 <div className="absolute right-2 bottom-2 flex items-center gap-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity bg-[#121217] pl-2 rounded-tl-md">
@@ -169,6 +290,7 @@ export default function FileGrid({
           </div>
         );
       })}
+      </GalleryMarqueeContainer>
     </div>
   );
 }

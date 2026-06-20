@@ -12,6 +12,7 @@ interface CommentsPanelProps {
   notificationSent: boolean;
   jumpToTime: (time: number) => void;
   isLive?: boolean;
+  disabled?: boolean;
 }
 
 export default function CommentsPanel({
@@ -26,6 +27,7 @@ export default function CommentsPanel({
   notificationSent,
   jumpToTime,
   isLive = false,
+  disabled = false,
 }: CommentsPanelProps) {
   return (
     <aside className="w-full bg-[#121217] flex flex-col h-full border-l border-white/5 shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.5)] z-10">
@@ -48,7 +50,9 @@ export default function CommentsPanel({
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {comments.length === 0 ? (
           <div className="h-full flex items-center justify-center text-xs text-gray-500 italic">
-            No feedback yet.
+            {disabled
+              ? "Select a video to view or add comments"
+              : "No feedback yet."}
           </div>
         ) : (
           comments.map((comment) => (
@@ -118,21 +122,29 @@ export default function CommentsPanel({
           <textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Leave a comment..."
+            placeholder={
+              disabled
+                ? "Select a video to leave a comment..."
+                : "Leave a comment..."
+            }
             rows={2}
-            className="w-full bg-[#050505] border border-white/10 rounded-md p-3 text-xs text-white outline-none focus:border-[#d4af37] resize-none mb-3"
+            disabled={disabled}
+            className="w-full bg-[#050505] border border-white/10 rounded-md p-3 text-xs text-white outline-none focus:border-[#d4af37] resize-none mb-3 disabled:cursor-not-allowed disabled:opacity-50"
           />
 
-          {/* 🔥 ফিক্সড: বাটনটি এখন শুধুমাত্র তখনই ডিসেবল হবে যখন টেক্সটবক্স খালি থাকবে */}
           <button
             type="submit"
-            disabled={!newComment.trim()}
-            className={`w-full py-2.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-colors ${newComment.trim() ? "bg-[#d4af37] hover:bg-[#b8952b] text-black" : "bg-gray-800 text-gray-500 cursor-not-allowed"}`}
+            disabled={disabled || !newComment.trim()}
+            className={`w-full py-2.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              !disabled && newComment.trim()
+                ? "bg-[#d4af37] hover:bg-[#b8952b] text-black"
+                : "bg-gray-800 text-gray-500 cursor-not-allowed"
+            }`}
           >
             Post Comment
           </button>
         </form>
-        {comments.length > 0 && (
+        {comments.length > 0 && !disabled && (
           <div className="px-4 pb-4">
             <div className="p-3 border border-white/5 bg-[#1c1c24] rounded-lg">
               <p className="text-[10px] text-gray-400 mb-2">

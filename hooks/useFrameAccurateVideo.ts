@@ -64,6 +64,10 @@ export const useFrameAccurateVideo = (
       calculateSMPTE(video.currentTime, frameRate);
     };
 
+    const handleSeeking = () => {
+      calculateSMPTE(video.currentTime, frameRate);
+    };
+
     // 🔥 Added standard timeupdate for scrubbing the native video timeline
     const handleTimeUpdate = () => {
       if (video.paused) {
@@ -74,6 +78,7 @@ export const useFrameAccurateVideo = (
     video.addEventListener("play", handlePlay);
     video.addEventListener("pause", handlePause);
     video.addEventListener("seeked", handleSeek);
+    video.addEventListener("seeking", handleSeeking);
     video.addEventListener("timeupdate", handleTimeUpdate);
 
     // Initial calculation setup
@@ -84,6 +89,7 @@ export const useFrameAccurateVideo = (
       video.removeEventListener("play", handlePlay);
       video.removeEventListener("pause", handlePause);
       video.removeEventListener("seeked", handleSeek);
+      video.removeEventListener("seeking", handleSeeking);
       video.removeEventListener("timeupdate", handleTimeUpdate);
     };
   }, [videoRef.current, frameRate, calculateSMPTE]); // 🔥 Changed to strictly watch .current

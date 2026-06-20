@@ -57,7 +57,7 @@ export default function AccessPage() {
           <Link href="/" className="inline-block mb-8">
             <Image
               src="/assets/logo.png"
-              alt="Kachna Media"
+              alt="Rendorax"
               width={120}
               height={60}
               className="h-[60px] w-auto mx-auto"

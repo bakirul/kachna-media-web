@@ -31,11 +31,11 @@ export default function PrivacyPolicyPage() {
               1. Introduction
             </h2>
             <p className="text-sm leading-relaxed text-text-gray font-light">
-              Kachna Media Limited ("we," "our," or "us") respects your privacy
+              Rendorax Limited ("we," "our," or "us") respects your privacy
               and is committed to protecting your personal data and project
               assets. This Privacy Policy outlines how we collect, use, and
               safeguard your information when you visit our website
-              (kachnamedia.com), use our Client Vault, or engage with our
+              (rendorax.com), use our Client Vault, or engage with our
               post-production and digital services.
             </p>
           </div>
@@ -135,7 +135,7 @@ export default function PrivacyPolicyPage() {
               automation, secure hosting, and payment processing. These
               providers adhere to their own strict privacy frameworks and are
               only granted data access necessary to perform their specific
-              functions for Kachna Media.
+              functions for Rendorax.
             </p>
           </div>
 
@@ -151,16 +151,16 @@ export default function PrivacyPolicyPage() {
             </p>
             <div className="bg-black border border-white/10 p-6 rounded-sm">
               <p className="text-sm text-text-gray font-mono leading-loose">
-                <strong className="text-white">Kachna Media Limited</strong>
+                <strong className="text-white">Rendorax Limited</strong>
                 <br />
                 Dhaka, Bangladesh
                 <br />
                 Email:{" "}
                 <a
-                  href="mailto:legal@kachnamedia.com"
+                  href="mailto:legal@rendorax.com"
                   className="text-gold-primary hover:text-white transition-colors"
                 >
-                  legal@kachnamedia.com
+                  legal@rendorax.com
                 </a>
               </p>
             </div>

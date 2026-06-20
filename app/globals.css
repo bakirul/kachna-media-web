@@ -38,3 +38,76 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #d4af37;
 }
+
+/* Premiere-style video timeline scrubber */
+.video-timeline-scrubber {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    #d4af37 0%,
+    #d4af37 var(--scrub-progress, 0%),
+    rgba(255, 255, 255, 0.08) var(--scrub-progress, 0%),
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  cursor: pointer;
+  outline: none;
+}
+
+.video-timeline-scrubber:disabled {
+  cursor: not-allowed;
+}
+
+.video-timeline-scrubber::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: transparent;
+}
+
+.video-timeline-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -4px;
+  border-radius: 50%;
+  border: 2px solid #1a1a1f;
+  background: #d4af37;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25), 0 2px 8px rgba(0, 0, 0, 0.45);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.video-timeline-scrubber:not(:disabled):hover::-webkit-slider-thumb,
+.video-timeline-scrubber:not(:disabled):active::-webkit-slider-thumb {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.35), 0 2px 10px rgba(0, 0, 0, 0.55);
+}
+
+.video-timeline-scrubber::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.video-timeline-scrubber::-moz-range-progress {
+  height: 6px;
+  border-radius: 9999px;
+  background: #d4af37;
+}
+
+.video-timeline-scrubber::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #1a1a1f;
+  background: #d4af37;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25), 0 2px 8px rgba(0, 0, 0, 0.45);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.video-timeline-scrubber:not(:disabled):hover::-moz-range-thumb,
+.video-timeline-scrubber:not(:disabled):active::-moz-range-thumb {
+  transform: scale(1.12);
+}

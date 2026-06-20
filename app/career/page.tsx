@@ -41,7 +41,7 @@ export default function CareerPage() {
           </span>
         </h1>
         <p className="text-sm md:text-base max-w-[650px] font-light text-text-gray leading-relaxed">
-          At Kachna Media, we don't just cut video—we respect broadcast
+          At Rendorax, we don't just cut video—we respect broadcast
           standards, embrace technical optimization, and master advanced
           automated workflows. If you possess raw discipline, we want you in our
           bays.

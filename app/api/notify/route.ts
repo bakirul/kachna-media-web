@@ -82,12 +82,12 @@ export async function POST(request: Request) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              content: `🔥 **Kachna Vault: Review Session Completed!**`,
+              content: `🔥 **Rendorax Vault: Review Session Completed!**`,
               embeds: [
                 {
                   title: `🎬 Project: ${safeFileName}`,
                   description: `The client has finished reviewing this asset and submitted all feedback notes.`,
-                  color: 13936439, // Kachna Gold
+                  color: 13936439, // Rendorax Gold
                   fields: [
                     { name: "📊 Total Notes/Comments", value: `\`${totalComments} Comments\``, inline: true },
                     { name: "👤 Reviewed By", value: safeUserEmail, inline: true },
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
           const resend = new Resend(apiKey);
           await resend.emails.send({
             from: "Client Vault <onboarding@resend.dev>",
-            to: ["kachnamedia@gmail.com"],
+            to: ["rendorax@gmail.com"],
             subject: `🎬 Review Completed for ${safeFileName}`,
             html: `
               <div style="font-family: Arial, sans-serif; background-color: #111; color: #fff; padding: 20px; border-radius: 8px;">
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
                   <p style="font-size: 14px; margin: 8px 0;"><strong>Total Feedback Left:</strong> <span style="color: #d4af37; font-weight: bold;">${totalComments} comments</span></p>
                   <p style="font-size: 14px; margin: 8px 0;"><strong>Client Email:</strong> ${safeUserEmail}</p>
                   <br/>
-                  <a href="https://www.kachnamedia.com/admin" style="background-color:#d4af37;color:black;padding:12px 24px;text-decoration:none;font-weight:bold;text-transform:uppercase;display:inline-block;border-radius:4px;">Open Kachna HQ to View Notes</a>
+                  <a href="https://www.rendorax.com/admin" style="background-color:#d4af37;color:black;padding:12px 24px;text-decoration:none;font-weight:bold;text-transform:uppercase;display:inline-block;border-radius:4px;">Open Rendorax HQ to View Notes</a>
               </div>
             `,
           });
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
       const resend = new Resend(apiKey);
       const { data, error } = await resend.emails.send({
         from: "Client Vault <onboarding@resend.dev>",
-        to: ["kachnamedia@gmail.com"],
+        to: ["rendorax@gmail.com"],
         subject: "🚨 New Assets Uploaded to Vault",
         html: `
           <div style="font-family: Arial, sans-serif; background-color: #111; color: #fff; padding: 20px; border-radius: 8px;">
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
               <p style="font-size: 14px; margin: 8px 0;"><strong>Directory:</strong> ${safeFolder}</p>
               <p style="font-size: 14px; margin: 8px 0;"><strong>Files Transferred:</strong> ${safeFileCount}</p>
               <br/>
-              <a href="https://www.kachnamedia.com/admin" style="background-color:#d4af37;color:black;padding:12px 24px;text-decoration:none;font-weight:bold;text-transform:uppercase;display:inline-block;border-radius:4px;">Access Kachna HQ</a>
+              <a href="https://www.rendorax.com/admin" style="background-color:#d4af37;color:black;padding:12px 24px;text-decoration:none;font-weight:bold;text-transform:uppercase;display:inline-block;border-radius:4px;">Access Rendorax HQ</a>
           </div>
         `,
       });

@@ -112,12 +112,8 @@ export const useFileManager = (user: any, currentFolder: string) => {
         supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
         supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         userAccessToken: session.access_token,
-        onProgress: (percentage, bytesUploaded, bytesTotal) => {
-          // Update UI state with overall progress
+        onProgress: (percentage) => {
           setUploadProgress(percentage);
-          console.log(
-            `[Upload] ${percentage}% (${bytesUploaded}/${bytesTotal} bytes)`,
-          );
         },
         onSuccess: () => {
           setUploadProgress(100);

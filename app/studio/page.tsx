@@ -13,7 +13,7 @@ export default function StudioPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[500px] bg-gold-primary blur-[200px] opacity-10 -z-10 rounded-full pointer-events-none"></div>
 
         <span className="text-[11px] uppercase tracking-[0.3em] text-gold-primary block mb-6 animate-pulse">
-          Inside Kachna Media
+          Inside Rendorax
         </span>
         <h1 className="text-5xl md:text-7xl font-display leading-[1.1] max-w-[800px] mb-8 text-white">
           The{" "}
@@ -58,7 +58,7 @@ export default function StudioPage() {
             </h2>
 
             <p className="text-base leading-relaxed text-text-gray font-light">
-              The foundation of Kachna Media is built upon over 16 years of
+              The foundation of Rendorax is built upon over 16 years of
               relentless experience in the high-pressure broadcast television
               industry. Operating entirely as a self-educated professional
               without relying on institutional degrees, the focus has always

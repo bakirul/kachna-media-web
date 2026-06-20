@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/", // সব পেজ স্ক্যান করার অনুমতি দেওয়া হলো
       disallow: "/private/", // যদি কোনো সিক্রেট পেজ থাকে, তা যেন গুগল স্ক্যান না করে
     },
-    sitemap: "https://kachnamedia.com/sitemap.xml", // সাইটম্যাপের লিংক গুগলকে জানিয়ে দেওয়া
+    sitemap: "https://rendorax.com/sitemap.xml", // সাইটম্যাপের লিংক গুগলকে জানিয়ে দেওয়া
   };
 }

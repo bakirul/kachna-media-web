@@ -54,12 +54,12 @@ export default function ChecklistPage() {
               {/* Brand Logo for Web (White/Gold) & Print (Black/Grayscale if needed) */}
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 border-2 border-gold-primary flex items-center justify-center print:border-black">
-                  <span className="text-gold-primary font-display font-bold text-lg print:text-black">
-                    K
+                  <span className="text-gold-primary font-display font-bold text-lg print:text-black" aria-hidden="true">
+                    R
                   </span>
                 </div>
                 <span className="text-xl font-display tracking-widest uppercase text-white print:text-black">
-                  Kachna Media
+                  Rendorax
                 </span>
               </div>
             </div>

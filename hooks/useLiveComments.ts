@@ -245,7 +245,7 @@ export const useLiveComments = (
       .join("\n\n");
     const blob = new Blob(
       [
-        `KACHNA STUDIO - REVIEW REPORT\nFile: ${previewFile?.name}\nTotal Comments: ${comments.length}\n\n${text}`,
+        `RENDORAX STUDIO - REVIEW REPORT\nFile: ${previewFile?.name}\nTotal Comments: ${comments.length}\n\n${text}`,
       ],
       { type: "text/plain" },
     );

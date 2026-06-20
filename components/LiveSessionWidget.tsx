@@ -4,6 +4,11 @@ import Peer from "simple-peer";
 import { Socket } from "socket.io-client";
 import { useDashboardStore } from "@/store/useDashboardStore";
 import { useGlobalStore } from "@/store/useGlobalStore";
+import { useLiveMicTranslation } from "@/hooks/useLiveMicTranslation";
+import { resolveSpeechLanguage } from "@/utils/languageCodes";
+import { buildPeerOptions } from "@/utils/webrtcConfig";
+import { showToast } from "@/store/useToastStore";
+import { translateIncomingChatMessage } from "@/utils/translateLiveChatMessage";
 
 interface LiveSessionProps {
   socket: Socket | null;
@@ -35,12 +40,26 @@ const setMediaBitrate = (sdp: string, bitrate: number) => {
   return lines.join('\r\n');
 };
 
+function isMissingMediaDeviceError(error: unknown): boolean {
+  if (!(error instanceof DOMException)) return false;
+  return (
+    error.name === "NotFoundError" ||
+    error.name === "NotReadableError" ||
+    error.name === "DevicesNotFoundError"
+  );
+}
+
 const VideoPeer = ({ peer, isMuted }: { peer: Peer.Instance; isMuted?: boolean }) => {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
-    peer.on("stream", (stream) => {
+    const onStream = (stream: MediaStream) => {
       if (ref.current) ref.current.srcObject = stream;
-    });
+    };
+    peer.on("stream", onStream);
+    return () => {
+      peer.off("stream", onStream);
+      if (ref.current) ref.current.srcObject = null;
+    };
   }, [peer]);
   return (
     <video
@@ -58,16 +77,33 @@ export default function LiveSessionWidget({
   roomId,
   user,
 }: LiveSessionProps) {
-  const { isLiveMinimized, setIsLiveMinimized, userLanguage } = useDashboardStore();
-  const { isLiveSessionActive: hasJoined, setIsLiveSessionActive: setHasJoined } = useGlobalStore();
+  const { isLiveMinimized, setIsLiveMinimized } = useDashboardStore();
+  const {
+    isLiveSessionActive: hasJoined,
+    setIsLiveSessionActive: setHasJoined,
+    isMicActive,
+    setIsMicActive,
+    selectedLanguage,
+  } = useGlobalStore();
+  const speechProfile = resolveSpeechLanguage(selectedLanguage);
+  const liveLanguage = speechProfile.sttCode;
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [isTextOnlyMode, setIsTextOnlyMode] = useState(false);
 
   const [peers, setPeers] = useState<{ peerID: string; peer: Peer.Instance }[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [chatMessages, setChatMessages] = useState<
-    { senderName: string; text: string; timestamp: string; translated?: boolean }[]
+  const [liveMessages, setLiveMessages] = useState<
+    {
+      id: string;
+      senderName: string;
+      text: string;
+      timestamp: string;
+      translated?: boolean;
+      translationFailed?: boolean;
+    }[]
   >([]);
   const [newMsg, setNewMsg] = useState("");
+  const [mediaError, setMediaError] = useState<string | null>(null);
 
   // Translation State
   const [isTranslationEnabled, setIsTranslationEnabled] = useState(false);
@@ -83,6 +119,42 @@ export default function LiveSessionWidget({
   const myVideo = useRef<HTMLVideoElement>(null);
   const peersRef = useRef<{ [socketId: string]: Peer.Instance }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const liveLanguageRef = useRef(liveLanguage);
+  const translationTargetRef = useRef(speechProfile.geminiName);
+  const localSenderName = user?.email?.split("@")[0] || "User";
+
+  const appendLiveMessage = (
+    message: {
+      id: string;
+      senderName: string;
+      text: string;
+      timestamp: string;
+      translated?: boolean;
+      translationFailed?: boolean;
+    },
+  ) => {
+    setLiveMessages((prev) => {
+      if (prev.some((item) => item.id === message.id)) {
+        return prev;
+      }
+      return [...prev, message];
+    });
+  };
+
+  useLiveMicTranslation({
+    socket,
+    user,
+    enabled: hasJoined && isMicActive,
+    speakTranslations: hasJoined,
+  });
+
+  useEffect(() => {
+    liveLanguageRef.current = liveLanguage;
+    translationTargetRef.current = speechProfile.geminiName;
+    if (socket && hasJoined) {
+      socket.emit("join-room-language", liveLanguage);
+    }
+  }, [liveLanguage, speechProfile.geminiName, socket, hasJoined]);
 
   useEffect(() => {
     setHasHydrated(true);
@@ -92,66 +164,52 @@ export default function LiveSessionWidget({
     if (hasJoined && !isLiveMinimized) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [chatMessages, isLiveMinimized, hasJoined]);
+  }, [liveMessages, isLiveMinimized, hasJoined]);
 
   useEffect(() => {
     if (!socket || !roomId || !hasJoined) return;
 
-    let handlers: any = {};
+    let cancelled = false;
+    const handlers: Record<string, (...args: any[]) => void> = {};
 
-    navigator.mediaDevices
-      .getUserMedia({ 
-        video: true, 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      })
-      .then((mediaStream) => {
-        localStreamRef.current = mediaStream;
-        setStream(mediaStream);
-        if (myVideo.current) myVideo.current.srcObject = mediaStream;
+    const detachSocketHandlers = () => {
+      if (handlers.userConnected) socket.off("user-connected", handlers.userConnected);
+      if (handlers.webrtcOffer) socket.off("webrtc-offer", handlers.webrtcOffer);
+      if (handlers.webrtcAnswer) socket.off("webrtc-answer", handlers.webrtcAnswer);
+      if (handlers.userDisconnected) socket.off("user-disconnected", handlers.userDisconnected);
+      if (handlers.receiveChatMessage) socket.off("receive-chat-message", handlers.receiveChatMessage);
+      if (handlers.liveCaption) socket.off("live-caption", handlers.liveCaption);
+      if (handlers.translatedAudioChunk) socket.off("translated-audio-chunk", handlers.translatedAudioChunk);
+    };
 
-        // --- AUDIO TRANSLATION PIPELINE SETUP ---
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-        syntheticDestRef.current = audioContextRef.current.createMediaStreamDestination();
-        
-        try {
-          const source = audioContextRef.current.createMediaStreamSource(mediaStream);
-          const processor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
-          audioProcessorRef.current = processor;
-          
-          source.connect(processor);
-          processor.connect(audioContextRef.current.destination);
+    const cleanupMediaAndPeers = () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
+        localStreamRef.current = null;
+      }
+      if (audioProcessorRef.current) {
+        audioProcessorRef.current.disconnect();
+        audioProcessorRef.current = null;
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      if (captionTimeout.current) clearTimeout(captionTimeout.current);
 
-          processor.onaudioprocess = (e) => {
-            if (isTranslationEnabledRef.current) {
-                const inputData = e.inputBuffer.getChannelData(0);
-                const pcm16 = new Int16Array(inputData.length);
-                for (let i = 0; i < inputData.length; i++) {
-                    const s = Math.max(-1, Math.min(1, inputData[i]));
-                    pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                }
-                socket.emit("audio-chunk", {
-                    roomId,
-                    chunk: pcm16.buffer,
-                    senderId: user?.id,
-                    senderLanguage: useDashboardStore.getState().userLanguage
-                });
-            }
-          };
-        } catch(e) { console.error("AudioProcessor setup failed", e); }
+      Object.values(peersRef.current).forEach((peer) => peer.destroy());
+      peersRef.current = {};
+      setPeers([]);
+      setStream(null);
+      if (myVideo.current) myVideo.current.srcObject = null;
+    };
 
-        socket.emit("join-call", roomId, user?.email || "Team Member");
-        socket.emit("join-room-language", useDashboardStore.getState().userLanguage);
-
+    const registerSocketHandlers = (mediaStream: MediaStream | null) => {
+      if (mediaStream) {
         handlers.userConnected = (userId: string, socketId: string) => {
-          const peer = new Peer({
-            initiator: true,
-            trickle: false,
-            stream: mediaStream,
-          });
+          const peer = new Peer(
+            buildPeerOptions({ initiator: true, stream: mediaStream }),
+          );
 
           peer.on("signal", (signal: any) => {
             if (signal.type === "offer" || signal.type === "answer") {
@@ -164,17 +222,19 @@ export default function LiveSessionWidget({
             });
           });
 
+          peer.on("error", (err) => {
+            console.error("Live session peer error (outgoing):", err);
+          });
+
           peersRef.current[socketId] = peer;
           setPeers((prev) => [...prev, { peerID: socketId, peer }]);
         };
         socket.on("user-connected", handlers.userConnected);
 
         handlers.webrtcOffer = (data: any) => {
-          const peer = new Peer({
-            initiator: false,
-            trickle: false,
-            stream: mediaStream,
-          });
+          const peer = new Peer(
+            buildPeerOptions({ initiator: false, stream: mediaStream }),
+          );
 
           peer.on("signal", (signal: any) => {
             if (signal.type === "offer" || signal.type === "answer") {
@@ -184,6 +244,10 @@ export default function LiveSessionWidget({
               targetSocketId: data.callerSocketId,
               sdp: signal,
             });
+          });
+
+          peer.on("error", (err) => {
+            console.error("Live session peer error (incoming):", err);
           });
 
           peer.signal(data.sdp);
@@ -206,29 +270,48 @@ export default function LiveSessionWidget({
           setPeers((prev) => prev.filter((p) => p.peerID !== socketId));
         };
         socket.on("user-disconnected", handlers.userDisconnected);
+      }
 
-        handlers.receiveChatMessage = async (msg: any) => {
-          if (msg.senderLanguage && msg.senderLanguage !== userLanguage) {
-            try {
-              const res = await fetch("/api/translate-text", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: msg.text, targetLanguage: userLanguage }),
-              });
-              const data = await res.json();
-              if (data.translatedText) {
-                msg.text = data.translatedText;
-                msg.translated = true;
-              }
-            } catch (err) {
-              console.error("Chat translation failed", err);
-            }
-          }
-          setChatMessages((prev) => [...prev, msg]);
+      handlers.receiveChatMessage = async (msg: any) => {
+        const incomingId =
+          msg.id ??
+          `${msg.timestamp ?? ""}:${msg.senderSocketId ?? msg.senderName}:${msg.text}`;
+
+        if (msg.senderSocketId && msg.senderSocketId === socket.id) {
+          return;
+        }
+
+        const incoming = {
+          id: incomingId,
+          senderName: msg.senderName ?? "User",
+          text: String(msg.text ?? "").trim(),
+          timestamp: msg.timestamp ?? new Date().toISOString(),
+          senderLanguage: msg.senderLanguage,
         };
-        socket.on("receive-chat-message", handlers.receiveChatMessage);
 
-        // Pipeline testing events
+        if (!incoming.text) return;
+
+        if (incoming.senderName === localSenderName) {
+          return;
+        }
+
+        const targetLanguage = translationTargetRef.current;
+        const translation = await translateIncomingChatMessage(
+          incoming.text,
+          targetLanguage,
+        );
+
+        appendLiveMessage({
+          ...incoming,
+          text: translation.text,
+          translated: translation.translated,
+          translationFailed: translation.translationFailed,
+        });
+      };
+      socket.off("receive-chat-message");
+      socket.on("receive-chat-message", handlers.receiveChatMessage);
+
+      if (mediaStream) {
         handlers.liveCaption = (data: any) => {
           setLiveCaption((prev) => prev + data.text);
           if (captionTimeout.current) clearTimeout(captionTimeout.current);
@@ -244,42 +327,131 @@ export default function LiveSessionWidget({
             source.buffer = audioBuffer;
             source.connect(syntheticDestRef.current);
             source.start();
-          } catch (e) {
-             // console.error("Audio decode error", e);
+          } catch {
+            // ignore decode errors for partial chunks
           }
         };
         socket.on("translated-audio-chunk", handlers.translatedAudioChunk);
-      })
-      .catch((err) => {
-        console.error("Failed to get local stream", err);
-      });
+      }
+    };
+
+    const joinTextChatRoom = () => {
+      socket.emit("join-call", roomId, user?.email || "Team Member");
+      socket.emit("join-room-language", liveLanguageRef.current);
+      registerSocketHandlers(null);
+    };
+
+    const acquireMediaAndJoin = async () => {
+      setMediaError(null);
+      setIsTextOnlyMode(false);
+
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      };
+
+      let mediaStream: MediaStream | null = null;
+
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: audioConstraints,
+        });
+      } catch (primaryError) {
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: audioConstraints,
+          });
+          showToast("Camera blocked — joined with microphone only", "error");
+        } catch (secondaryError) {
+          if (
+            isMissingMediaDeviceError(primaryError) ||
+            isMissingMediaDeviceError(secondaryError)
+          ) {
+            setIsTextOnlyMode(true);
+            showToast(
+              "No camera or microphone detected. Joining in Text-Chat only mode.",
+            );
+            if (cancelled) return;
+            joinTextChatRoom();
+            return;
+          }
+
+          const message =
+            primaryError instanceof DOMException
+              ? primaryError.name === "NotAllowedError"
+                ? "Camera/microphone permission denied. Allow access in browser settings."
+                : primaryError.message
+              : "Could not access camera or microphone.";
+          setMediaError(message);
+          showToast(message, "error");
+          setHasJoined(false);
+          return;
+        }
+      }
+
+      if (cancelled) {
+        mediaStream?.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      localStreamRef.current = mediaStream;
+      setStream(mediaStream);
+      if (myVideo.current) myVideo.current.srcObject = mediaStream;
+
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      syntheticDestRef.current = audioContextRef.current.createMediaStreamDestination();
+
+      try {
+        const source = audioContextRef.current.createMediaStreamSource(mediaStream);
+        const processor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
+        audioProcessorRef.current = processor;
+
+        source.connect(processor);
+        processor.connect(audioContextRef.current.destination);
+
+        processor.onaudioprocess = (e) => {
+          if (isTranslationEnabledRef.current) {
+            const inputData = e.inputBuffer.getChannelData(0);
+            const pcm16 = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+              const s = Math.max(-1, Math.min(1, inputData[i]));
+              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            socket.emit("audio-chunk", {
+              roomId,
+              chunk: pcm16.buffer,
+              senderId: user?.id,
+              senderLanguage: liveLanguageRef.current,
+            });
+          }
+        };
+      } catch (e) {
+        console.error("AudioProcessor setup failed", e);
+      }
+
+      if (cancelled) {
+        mediaStream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      socket.emit("join-call", roomId, user?.email || "Team Member");
+      socket.emit("join-room-language", liveLanguageRef.current);
+      registerSocketHandlers(mediaStream);
+    };
+
+    acquireMediaAndJoin();
 
     return () => {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      if (audioProcessorRef.current) {
-        audioProcessorRef.current.disconnect();
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        audioContextRef.current.close();
-      }
-      if (captionTimeout.current) clearTimeout(captionTimeout.current);
-
-      Object.values(peersRef.current).forEach((peer) => peer.destroy());
-      peersRef.current = {};
-      setPeers([]);
-      setStream(null);
-
-      if (handlers.userConnected) socket.off("user-connected", handlers.userConnected);
-      if (handlers.webrtcOffer) socket.off("webrtc-offer", handlers.webrtcOffer);
-      if (handlers.webrtcAnswer) socket.off("webrtc-answer", handlers.webrtcAnswer);
-      if (handlers.userDisconnected) socket.off("user-disconnected", handlers.userDisconnected);
-      if (handlers.receiveChatMessage) socket.off("receive-chat-message", handlers.receiveChatMessage);
-      if (handlers.liveCaption) socket.off("live-caption", handlers.liveCaption);
-      if (handlers.translatedAudioChunk) socket.off("translated-audio-chunk", handlers.translatedAudioChunk);
+      cancelled = true;
+      setIsTextOnlyMode(false);
+      socket.emit("leave-call", roomId, user?.email || "Team Member");
+      detachSocketHandlers();
+      cleanupMediaAndPeers();
     };
-  }, [socket, roomId, hasJoined, user]);
+  }, [socket, roomId, hasJoined, user, liveLanguage, setHasJoined]);
 
   const toggleTranslation = () => {
     const newState = !isTranslationEnabled;
@@ -292,24 +464,32 @@ export default function LiveSessionWidget({
     if (!newMsg.trim() || !socket) return;
 
     const msgData = {
+      id: crypto.randomUUID(),
       fileId: roomId,
-      senderName: user?.email?.split("@")[0] || "User",
+      senderName: localSenderName,
+      senderSocketId: socket.id,
       text: newMsg.trim(),
-      senderLanguage: userLanguage,
+      senderLanguage: liveLanguageRef.current,
+      timestamp: new Date().toISOString(),
     };
 
     socket.emit("send-chat-message", msgData);
-    setChatMessages((prev) => [
-      ...prev,
-      { ...msgData, timestamp: new Date().toISOString() },
-    ]);
+    appendLiveMessage({
+      id: msgData.id,
+      senderName: msgData.senderName,
+      text: msgData.text,
+      timestamp: msgData.timestamp,
+    });
     setNewMsg("");
   };
 
   const handleLeaveSession = () => {
     if (window.confirm("Are you sure you want to leave the live session?")) {
+      setIsMicActive(false);
       setHasJoined(false);
       setIsLiveMinimized(true);
+      setIsTextOnlyMode(false);
+      setLiveMessages([]);
     }
   };
 
@@ -320,6 +500,7 @@ export default function LiveSessionWidget({
       {!hasJoined && (
         <button
           onClick={() => {
+            setMediaError(null);
             setHasJoined(true);
             setIsLiveMinimized(false);
           }}
@@ -331,6 +512,10 @@ export default function LiveSessionWidget({
           </span>
           <span>START LIVE SESSION</span>
         </button>
+      )}
+
+      {mediaError && !hasJoined && (
+        <p className="mt-2 max-w-xs text-[10px] text-red-400">{mediaError}</p>
       )}
 
       {hasJoined && isLiveMinimized && (
@@ -345,7 +530,7 @@ export default function LiveSessionWidget({
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
             </span>
             <span className="text-xs font-semibold text-white group-hover:text-[#d4af37] transition-colors">
-              Live Active ({peers.length + 1})
+              {isTextOnlyMode ? "Text Chat" : "Live Active"} ({peers.length + 1})
             </span>
           </div>
           <div className="w-[1px] h-4 bg-white/10" />
@@ -365,10 +550,15 @@ export default function LiveSessionWidget({
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
               <span className="text-xs font-semibold text-white">
-                Live Session ({peers.length + 1})
+              {isTextOnlyMode ? "Text Chat" : "Live Session"} ({peers.length + 1})
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {isTextOnlyMode && (
+              <span className="rounded-md bg-amber-500/15 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-amber-300">
+                No A/V
               </span>
-            </div>
-            <div className="flex items-center gap-1.5">
+            )}
               <button
                 onClick={toggleTranslation}
                 className={`transition-colors p-1.5 rounded-md flex items-center gap-1 text-[10px] font-bold ${
@@ -403,7 +593,12 @@ export default function LiveSessionWidget({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 px-3 pt-3 shrink-0 relative">
+          <div className="flex flex-wrap gap-2 px-3 pt-3 shrink-0 relative min-h-[2.5rem]">
+            {isTextOnlyMode && !stream && peers.length === 0 && (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-white/20 bg-white/5 text-[9px] font-bold uppercase tracking-wide text-gray-400">
+                Chat
+              </div>
+            )}
             {liveCaption && (
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/80 px-3 py-1.5 rounded-lg text-[#d4af37] text-[10px] font-bold text-center z-50 whitespace-pre-wrap max-w-[90%] shadow-lg border border-[#d4af37]/30">
                 {liveCaption}
@@ -429,24 +624,31 @@ export default function LiveSessionWidget({
           </div>
 
           <div className="p-3 overflow-y-auto custom-scrollbar flex flex-col gap-3 h-[250px]">
-            {chatMessages.length === 0 ? (
+            {liveMessages.length === 0 ? (
               <div className="m-auto text-[10px] text-gray-500 text-center">
                 Start the conversation...
               </div>
             ) : (
-              chatMessages.map((msg, idx) => (
+              liveMessages.map((msg) => (
                 <div
-                  key={idx}
-                  className={`flex flex-col ${msg.senderName === (user?.email?.split("@")[0] || "User") ? "items-end" : "items-start"}`}
+                  key={msg.id}
+                  className={`flex flex-col ${msg.senderName === localSenderName ? "items-end" : "items-start"}`}
                 >
                   <span className="text-[9px] text-gray-500 mb-0.5">
                     {msg.senderName}
                   </span>
                   <div
-                    className={`px-3 py-1.5 rounded-xl text-xs max-w-[85%] ${msg.senderName === (user?.email?.split("@")[0] || "User") ? "bg-[#d4af37] text-black rounded-tr-sm" : "bg-white/10 text-white rounded-tl-sm"}`}
+                    className={`px-3 py-1.5 rounded-xl text-xs max-w-[85%] ${msg.senderName === localSenderName ? "bg-[#d4af37] text-black rounded-tr-sm" : "bg-white/10 text-white rounded-tl-sm"}`}
                   >
                     {msg.text}
-                    {msg.translated && <span className="text-[8px] opacity-60 ml-1">(Translated)</span>}
+                    {msg.translated && (
+                      <span className="text-[8px] opacity-60 ml-1">(Translated)</span>
+                    )}
+                    {msg.translationFailed && (
+                      <span className="text-[8px] opacity-60 ml-1 text-amber-300">
+                        (Translation Failed)
+                      </span>
+                    )}
                   </div>
                 </div>
               ))

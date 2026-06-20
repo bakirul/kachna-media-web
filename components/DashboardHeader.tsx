@@ -1,11 +1,15 @@
 // components/DashboardHeader.tsx
 "use client";
 import React, { useState, useRef } from "react";
+import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import AppearanceSettings from "./dashboard/AppearanceSettings";
+import MediaUploadModal from "./modals/MediaUploadModal";
+import LiveSessionToolbar from "./dashboard/LiveSessionToolbar";
 import { useDashboardStore } from "@/store/useDashboardStore";
 import { useGlobalStore } from "@/store/useGlobalStore";
+import type { R2UploadResult } from "@/utils/r2Upload";
 
 const LANGUAGES = [
   { code: "en-US", label: "🇺🇸 EN-US" },
@@ -34,20 +38,22 @@ export default function DashboardHeader({
   handleUpload,
   uploading,
   onToggleScreenShare,
+  onR2UploadSuccess,
 }: {
   handleUpload: (files: FileList | null) => Promise<void>;
   uploading: boolean;
   onToggleScreenShare?: () => void;
+  onR2UploadSuccess: (result: R2UploadResult, file: File) => void | Promise<void>;
 }) {
   const router = useRouter();
   const supabase = createClient();
 
   const { isSidebarOpen, setIsSidebarOpen, isEditor, isScreenSharing } = useDashboardStore();
-  const userLanguage = useDashboardStore((state) => state.userLanguage);
   const selectedLanguage = useGlobalStore((state) => state.selectedLanguage);
   const setSelectedLanguage = useGlobalStore((state) => state.setSelectedLanguage);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
+  const [isR2ModalOpen, setIsR2ModalOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -66,6 +72,12 @@ export default function DashboardHeader({
       {isAppearanceOpen && (
         <AppearanceSettings onClose={() => setIsAppearanceOpen(false)} />
       )}
+
+      <MediaUploadModal
+        isOpen={isR2ModalOpen}
+        onClose={() => setIsR2ModalOpen(false)}
+        onUploadSuccess={onR2UploadSuccess}
+      />
 
       <header className="h-14 bg-[#121217] border-b border-white/5 flex items-center justify-between px-6 shrink-0 z-40 relative">
         <div className="flex items-center gap-3">
@@ -90,12 +102,18 @@ export default function DashboardHeader({
               <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
           </button>
-          <div className="w-8 h-8 rounded-full bg-[#d4af37] flex items-center justify-center text-black font-bold text-xs shadow-lg">
-            K
+          <div className="flex items-center gap-2">
+            <Image
+              alt="Rendorax Logo"
+              className="object-contain"
+              height={32}
+              src="/assets/logo.svg"
+              width={32}
+            />
+            <h1 className="text-sm font-semibold text-white tracking-wide hidden sm:block">
+              Rendorax Studio
+            </h1>
           </div>
-          <h1 className="text-sm font-semibold text-white tracking-wide hidden sm:block">
-            Kachna Studio
-          </h1>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
@@ -112,6 +130,8 @@ export default function DashboardHeader({
               ))}
             </select>
           )}
+
+          <LiveSessionToolbar />
 
           <button
             onClick={() => setIsAppearanceOpen(!isAppearanceOpen)}
@@ -152,6 +172,46 @@ export default function DashboardHeader({
               <span>{isScreenSharing ? "Stop Sharing" : "Go Live (Screen Share)"}</span>
             </button>
           )}
+
+          <button
+            onClick={() => setIsR2ModalOpen(true)}
+            className="hidden sm:flex text-[11px] uppercase tracking-[0.2em] border border-[#d4af37]/40 bg-[#1c1c24] hover:bg-[#d4af37]/10 text-[#d4af37] px-4 py-2.5 font-bold rounded-md shadow-[0_0_20px_rgba(212,175,55,0.08)] hover:shadow-[0_0_25px_rgba(212,175,55,0.18)] transition-all items-center gap-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+            </svg>
+            Upload to Cloud
+          </button>
+
+          <button
+            onClick={() => setIsR2ModalOpen(true)}
+            className="sm:hidden flex items-center justify-center border border-[#d4af37]/40 bg-[#1c1c24] text-[#d4af37] p-2 rounded-md shadow-[0_0_15px_rgba(212,175,55,0.1)]"
+            aria-label="Upload to Cloud"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+            </svg>
+          </button>
 
           <button
             onClick={() => inputRef.current?.click()}

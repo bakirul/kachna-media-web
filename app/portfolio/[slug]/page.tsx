@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image"; // Next.js Image Component ইমপোর্ট করা হলো
 import { notFound } from "next/navigation";
 
-// Real Data - Kachna Media Portfolio Projects
+// Real Data - Rendorax Portfolio Projects
 const projectsDetail = [
   {
     slug: "heroic-archives",
@@ -48,12 +48,12 @@ const projectsDetail = [
     challenge:
       "An upcoming movie streaming platform required a high-fidelity prototype and demo presentation to secure investor funding, demonstrating seamless video delivery architectures and intuitive content navigation.",
     solution:
-      "Spearheaded the development phase utilizing modern deployment structures via Vercel and organized web project layouts under the Kachna Legacy team. Showcased the platform's potential with a visually stunning, user-centric demo.",
+      "Spearheaded the development phase utilizing modern deployment structures via Vercel and organized web project layouts under the Rendorax Studio team. Showcased the platform's potential with a visually stunning, user-centric demo.",
   },
   {
-    slug: "kachnafit",
-    title: "KachnaFit Platform",
-    client: "KachnaFit",
+    slug: "rendoraxfit",
+    title: "RendoraxFit Platform",
+    client: "RendoraxFit",
     role: "Web & Revenue Integration",
     duration: "Continuous",
     year: "2025",

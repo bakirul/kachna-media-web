@@ -25,7 +25,7 @@ test.skip('websocket sync', async ({ page }) => {
       console.log("Logging in both users...");
       const login = async (page: any) => {
         await page.goto("http://localhost:3000/access");
-        await page.locator('input[type="email"]').fill("test@kachnamedia.com");
+        await page.locator('input[type="email"]').fill("test@rendorax.com");
         await page.locator('input[type="password"]').fill("TestClient123!");
         await page.getByRole("button", { name: /authenticate/i }).click();
         await page.waitForURL("**/dashboard", { timeout: 60000 });

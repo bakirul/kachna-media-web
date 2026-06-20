@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { Manrope, Playfair_Display, JetBrains_Mono } from "next/font/google";
-import { GoogleAnalytics } from "@next/third-parties/google"; // Analytics Import
-import "./globals.css"; // Global CSS
-import ChatbotWidget from "@/components/ChatbotWidget"; // Chatbot Widget
+import { GoogleAnalytics } from "@next/third-parties/google";
+import "./globals.css";
+import ChatbotWidget from "@/components/ChatbotWidget";
 import GlobalLiveWidget from "@/components/GlobalLiveWidget";
 
-// 1. Font Configurations
 const manrope = Manrope({
   subsets: ["latin"],
   variable: "--font-main",
@@ -23,18 +22,23 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
 });
 
-// 2. Global SEO & Metadata Configuration
 export const metadata: Metadata = {
-  title: "Kachna Media | Broadcast Post-Production Studio",
+  title: "Rendorax Studio | Broadcast Post-Production",
   description:
-    "A premium broadcast post-production studio based in Dhaka, Bangladesh.",
-  metadataBase: new URL("https://kachnamedia.com"),
-  verification: {
-    google: "uW6t6pYp1f9lFbxO92cq6s47acjHD8Zsor39tU-7hWU", // Google Site Verification Code
+    "Enterprise-level broadcast post-production, live cinematic collaboration, and Vault management.",
+  icons: {
+    icon: "/assets/logo.svg",
+  },
+  openGraph: {
+    title: "Rendorax Studio",
+    description:
+      "Enterprise-level broadcast post-production and live cinematic collaboration.",
+    url: "https://rendorax.com",
+    siteName: "Rendorax Studio",
+    type: "website",
   },
 };
 
-// 3. Main Root Layout
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -45,13 +49,10 @@ export default function RootLayout({
       <body
         className={`${manrope.variable} ${playfair.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        {/* আপনার ওয়েবসাইটের মূল কন্টেন্ট */}
         {children}
 
-        {/* Google Analytics */}
-        <GoogleAnalytics gaId="G-8F29XVWGML" />
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-8F29XVWGML"} />
 
-        {/* 🔥 আমাদের গ্লোবাল প্রিমিয়াম AI চ্যাটবট */}
         <ChatbotWidget />
         <GlobalLiveWidget />
       </body>

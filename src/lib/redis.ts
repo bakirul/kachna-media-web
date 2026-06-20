@@ -2,7 +2,7 @@
 import { Redis } from "ioredis";
 
 // Ensure environment variable is set (e.g., Upstash Redis URL or Localhost)
-const REDIS_URL = process.env.NEXT_PUBLIC_REDIS_URL || process.env.REDIS_URL || "redis://localhost:6379";
+const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
 const createRedisClient = () => {
   return new Redis(REDIS_URL, {

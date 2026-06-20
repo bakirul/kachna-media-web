@@ -111,7 +111,7 @@ const articlesData = [
     category: "AI & Automation",
     date: "April 25, 2026",
     readTime: "12 Min Read",
-    author: "Kachna Dev Core",
+    author: "Rendorax Dev Core",
     bgGlow: "from-purple-500/10",
     content: (
       <>
@@ -210,8 +210,8 @@ export default function BlogArticlePage({ params }) {
         </h1>
 
         <div className="flex items-center gap-3 border-b border-white/5 pb-8">
-          <div className="w-8 h-8 rounded-full bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-[10px] text-gold-primary font-bold">
-            K
+          <div className="w-8 h-8 rounded-full bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-[10px] text-gold-primary font-bold" aria-hidden="true">
+            R
           </div>
           <span className="text-xs uppercase tracking-wider text-text-white font-medium">
             By {article.author}

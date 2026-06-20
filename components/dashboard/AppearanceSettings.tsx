@@ -111,20 +111,6 @@ export default function AppearanceSettings({
 
       <div className="p-5 space-y-5">
         <div className="flex justify-between items-center">
-          <span className="text-gray-300 font-medium">Card Size</span>
-          <div className="flex bg-[#121217] rounded-md border border-white/5 p-1">
-            {["S", "M", "L"].map((size) => (
-              <button
-                key={size}
-                onClick={() => setViewSettings({ cardSize: size })}
-                className={`w-8 py-1 text-xs rounded transition-all ${viewSettings.cardSize === size ? "bg-[#d4af37] text-black font-bold shadow-sm" : "text-gray-500 hover:text-white"}`}
-              >
-                {size}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex justify-between items-center">
           <span className="text-gray-300 font-medium">Aspect Ratio</span>
           <div className="flex bg-[#121217] rounded-md border border-white/5 p-1 gap-1">
             <button

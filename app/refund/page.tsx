@@ -100,7 +100,7 @@ export default function RefundPolicyPage() {
               4. Facility Liability & Failures
             </h2>
             <p className="text-text-gray">
-              In the extremely rare event that Kachna Media Limited fails to
+              In the extremely rare event that Rendorax Limited fails to
               meet a critical milestone due to catastrophic technical failures,
               hardware corruption, or acts of God (Force Majeure), we will
               exhaust all redundant backup nodes and cloud architectures to
@@ -122,7 +122,7 @@ export default function RefundPolicyPage() {
             </p>
             <div className="bg-black border border-white/10 p-6 rounded-sm">
               <p className="text-sm text-text-gray font-mono leading-loose">
-                <strong className="text-white">Kachna Media Limited</strong>
+                <strong className="text-white">Rendorax Limited</strong>
                 <br />
                 Finance & Billing Operations
                 <br />
@@ -130,10 +130,10 @@ export default function RefundPolicyPage() {
                 <br />
                 Email:{" "}
                 <a
-                  href="mailto:billing@kachnamedia.com"
+                  href="mailto:billing@rendorax.com"
                   className="text-gold-primary hover:text-white transition-colors"
                 >
-                  billing@kachnamedia.com
+                  billing@rendorax.com
                 </a>
               </p>
             </div>

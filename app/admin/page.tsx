@@ -273,7 +273,7 @@ export default function AdminPortal() {
               Central Control Room
             </span>
             <h1 className="text-4xl font-display text-text-white tracking-wide">
-              Kachna HQ{" "}
+              Rendorax HQ{" "}
               <span className="text-sm font-main font-light text-text-gray">
                 v1.3
               </span>

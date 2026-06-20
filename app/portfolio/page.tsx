@@ -36,21 +36,21 @@ const projects = [
   },
   {
     id: 4,
-    title: "Kachna Media Broadcast Reel",
+    title: "Rendorax Broadcast Reel",
     category: "Broadcast",
     service: "Full Post-Production",
     image:
       "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?q=80&w=2056&auto=format&fit=crop",
-    slug: "kachna-media-reel",
+    slug: "rendorax-media-reel",
   },
   {
     id: 5,
-    title: "KachnaFit Platform",
+    title: "RendoraxFit Platform",
     category: "Commercial",
     service: "Web & Revenue Integration",
     image:
       "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop",
-    slug: "kachnafit",
+    slug: "rendoraxfit",
   },
   {
     id: 6,

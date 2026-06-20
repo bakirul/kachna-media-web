@@ -15,15 +15,23 @@ import { useDashboardStore } from "@/store/useDashboardStore";
 import Navbar from "@/components/Navbar";
 import VaultSidebar from "@/components/VaultSidebar";
 import CommentsPanel from "@/components/CommentsPanel";
-import LiveSessionWidget from "@/components/LiveSessionWidget";
 import DashboardHeader from "@/components/DashboardHeader";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import FileGrid from "@/components/dashboard/FileGrid";
 import LUFSMeter from "@/components/LUFSMeter";
+import VideoTimelineScrubber from "@/components/dashboard/VideoTimelineScrubber";
+import VideoCaptionTracks from "@/components/dashboard/VideoCaptionTracks";
 import TimelineShareWidget from "@/components/TimelineShareWidget";
 import RenameModal from "@/components/modals/RenameModal";
 import DeleteModal from "@/components/modals/DeleteModal";
 import MoveModal from "@/components/modals/MoveModal";
+import { saveMediaAsset, fetchR2StorageList, mediaFolderForSave, getMediaPlaybackUrl, isMediaAssetVideo, type MediaAssetRecord } from "@/utils/mediaAssets";
+import CloudAssetGallery from "@/components/dashboard/CloudAssetGallery";
+import GalleryBulkActionBar from "@/components/dashboard/GalleryBulkActionBar";
+import ToastHost from "@/components/ToastHost";
+import { useGalleryViewStyles } from "@/hooks/useGalleryViewStyles";
+import { getPreviewAssetKey } from "@/utils/previewAssetKey";
+import { buildPeerOptions } from "@/utils/webrtcConfig";
 
 const setMediaBitrate = (sdp: string, bitrate: number) => {
   let lines = sdp.split('\r\n');
@@ -56,7 +64,6 @@ export default function DashboardPage() {
   const [showNavbar, setShowNavbar] = useState(false);
 
   const {
-    viewSettings,
     leftPaneWidth,
     setLeftPaneWidth,
     sidebarWidth,
@@ -65,12 +72,15 @@ export default function DashboardPage() {
     setViewMode,
     isSidebarOpen,
     setIsSidebarOpen,
+    activeBin,
+    setActiveBin,
     currentFolder,
     setCurrentFolder,
     searchQuery,
     setSearchQuery,
     previewFile,
     setPreviewFile,
+    subtitleTracksByAssetKey,
     compareFile,
     setCompareFile,
     isCompareMode,
@@ -82,8 +92,12 @@ export default function DashboardPage() {
     isScreenSharing,
     setIsScreenSharing,
     projectStage,
-    setProjectStage
+    setProjectStage,
   } = useDashboardStore();
+
+  const activeSubtitleTracks = previewFile
+    ? subtitleTracksByAssetKey[getPreviewAssetKey(previewFile)] ?? []
+    : [];
 
   const isResizingLeft = useRef(false);
   const isResizingSidebar = useRef(false);
@@ -158,6 +172,8 @@ export default function DashboardPage() {
   const [renameModalState, setRenameModalState] = useState<{ isOpen: boolean; itemName: string; isFolder: boolean }>({ isOpen: false, itemName: "", isFolder: false });
   const [deleteModalState, setDeleteModalState] = useState<{ isOpen: boolean; itemName: string; isFolder: boolean }>({ isOpen: false, itemName: "", isFolder: false });
   const [moveModalState, setMoveModalState] = useState<{ isOpen: boolean; itemName: string }>({ isOpen: false, itemName: "" });
+  const [cloudAssets, setCloudAssets] = useState<MediaAssetRecord[]>([]);
+  const [cloudAssetsLoading, setCloudAssetsLoading] = useState(false);
 
   // Live Comments Hook
   const {
@@ -263,9 +279,7 @@ export default function DashboardPage() {
     if (!socket) return;
 
     const handleAdminStartedShare = (data: { roomId: string; editorSocketId: string }) => {
-      console.log("[DEBUG: Socket Rx] admin-started-timeline-share received", data);
-      console.log("Admin started timeline share, forcing UI switch to Cinema Mode");
-      setIsLiveStreaming(true); // Force UI switch BEFORE WebRTC negotiation
+      setIsLiveStreaming(true);
       socket.emit("timeline-client-ready", {
         targetSocketId: data.editorSocketId,
         roomId: `timeline-${data.roomId}`,
@@ -273,8 +287,7 @@ export default function DashboardPage() {
     };
 
     const handleAdminStoppedShare = () => {
-      console.log("Admin stopped timeline share, returning to file grid");
-      setIsLiveStreaming(false); // Force UI switch back to file grid
+      setIsLiveStreaming(false);
       if (clientScreenPeerRef.current) {
         clientScreenPeerRef.current.destroy();
         clientScreenPeerRef.current = null;
@@ -291,11 +304,9 @@ export default function DashboardPage() {
     const handleClientReady = (data: { clientSocketId: string }) => {
       if (!screenStreamRef.current) return;
 
-      const peer = new Peer({
-        initiator: true,
-        trickle: false,
-        stream: screenStreamRef.current,
-      });
+      const peer = new Peer(
+        buildPeerOptions({ initiator: true, stream: screenStreamRef.current }),
+      );
 
       peer.on("signal", (signal: any) => {
         if (signal.type === "offer" || signal.type === "answer") {
@@ -344,28 +355,11 @@ export default function DashboardPage() {
         }
       }
 
-      const peerOptions: any = {
+      const peerOptions = buildPeerOptions({
         initiator: false,
-        trickle: false,
-      };
-      if (localAudioStream) {
-        peerOptions.stream = localAudioStream;
-      }
-      const peer = new Peer(peerOptions);
-
-      // @ts-ignore
-      peer.on('iceConnectionStateChange', () => {
-        // @ts-ignore
-        console.log("[DEBUG: ICE State] ICE Connection State Change (event):", peer.iceConnectionState || "unknown");
+        stream: localAudioStream ?? undefined,
       });
-      // @ts-ignore
-      if (peer._pc) {
-        // @ts-ignore
-        peer._pc.addEventListener('iceconnectionstatechange', () => {
-          // @ts-ignore
-          console.log("[DEBUG: ICE State] ICE Connection State Change (native):", peer._pc.iceConnectionState);
-        });
-      }
+      const peer = new Peer(peerOptions);
 
       peer.on("signal", (signal: any) => {
         if (signal.type === "offer" || signal.type === "answer") {
@@ -378,9 +372,6 @@ export default function DashboardPage() {
       });
 
       peer.on("stream", (remoteStream) => {
-        console.log("[DEBUG: WebRTC Stream] Stream Received:", remoteStream);
-        console.log("[DEBUG: Ref Check] State of cinemaVideoRef.current:", cinemaVideoRef.current);
-        // UI is already mounted by admin-started-timeline-share, just attach stream safely
         const attachStream = () => {
           if (cinemaVideoRef.current) {
             cinemaVideoRef.current.srcObject = remoteStream;
@@ -459,7 +450,10 @@ export default function DashboardPage() {
     videoRef,
     24,
   );
-  const { lufs } = useLUFSMeter(videoRef, previewFile?.url);
+  const { lufs } = useLUFSMeter(
+    videoRef,
+    previewFile?.isVideo && !previewFile?.isCdn ? previewFile.url : undefined,
+  );
 
   useEffect(() => {
     setIsSidebarOpen(window.innerWidth >= 768);
@@ -470,13 +464,17 @@ export default function DashboardPage() {
     let isMounted = true;
     const loadUser = async () => {
       const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
-      if (isMounted && currentUser) {
-        setUser(currentUser);
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (isMounted) {
+        if (session?.user) {
+          setUser(session.user);
+          const editorCheck =
+            session.user.app_metadata?.role === "admin" ||
+            session.user.app_metadata?.role === "editor";
+          setIsEditor(editorCheck);
+        }
         setLoading(false);
-        const editorCheck = currentUser.app_metadata?.role === "admin" || currentUser.app_metadata?.role === "editor";
-        setIsEditor(editorCheck);
       }
     };
     loadUser();
@@ -603,7 +601,7 @@ export default function DashboardPage() {
     const url = await getSignedUrl(fileName);
     if (url) {
       const isVideo = fileName.match(/\.(mp4|webm|ogg|mov|mxf)$/i) !== null;
-      setPreviewFile({ name: fileName, url, isVideo });
+      setPreviewFile({ name: fileName, url, isVideo, previewKey: fileName });
       setIsCompareMode(false);
       setCompareFile(null);
 
@@ -687,6 +685,116 @@ export default function DashboardPage() {
   const onMoveFile = (fileName: string) => setMoveModalState({ isOpen: true, itemName: fileName });
   const onDeleteFolderUI = (folderName: string) => setDeleteModalState({ isOpen: true, itemName: folderName, isFolder: true });
 
+  const handleR2UploadSuccess = useCallback(
+    async (result: import("@/utils/r2Upload").R2UploadResult, file: File) => {
+      if (!user?.id) {
+        throw new Error("You must be signed in to save cloud uploads.");
+      }
+
+      await saveMediaAsset({
+        fileName: file.name,
+        publicUrl: result.publicUrl,
+        objectKey: result.objectKey,
+        mimeType: file.type || "application/octet-stream",
+        userId: user.id,
+        folder: mediaFolderForSave(currentFolder),
+        fileSize: file.size,
+      });
+
+      setActiveBin("cloud");
+
+      const folder = mediaFolderForSave(currentFolder);
+      const data = await fetchR2StorageList(
+        folder ? { folder } : undefined,
+      );
+      setCloudAssets(data);
+    },
+    [user, currentFolder, setActiveBin],
+  );
+
+  const handleCloudAssetPreview = useCallback(
+    (asset: MediaAssetRecord) => {
+      const playbackUrl = getMediaPlaybackUrl(asset);
+      if (!playbackUrl) {
+        console.error("Cloud asset is missing a playback URL:", asset);
+        return;
+      }
+
+      const isVideo = isMediaAssetVideo(asset);
+      setPreviewFile({
+        name: asset.fileName,
+        url: playbackUrl,
+        publicUrl: playbackUrl,
+        isVideo,
+        isCdn: true,
+        assetId: asset.id,
+        previewKey: asset.id,
+      });
+      setIsCompareMode(false);
+      setCompareFile(null);
+    },
+    [setPreviewFile, setIsCompareMode, setCompareFile],
+  );
+
+  const loadCloudAssets = useCallback(async () => {
+    setCloudAssetsLoading(true);
+    try {
+      const folder = mediaFolderForSave(currentFolder);
+      const data = await fetchR2StorageList(
+        folder ? { folder } : undefined,
+      );
+      setCloudAssets(data);
+    } catch (error) {
+      console.error("Failed to load cloud assets:", error);
+      setCloudAssets([]);
+    } finally {
+      setCloudAssetsLoading(false);
+    }
+  }, [currentFolder]);
+
+  useEffect(() => {
+    if (!loading && user && activeBin === "cloud") {
+      loadCloudAssets();
+    }
+  }, [loading, user, activeBin, loadCloudAssets]);
+
+  useEffect(() => {
+    if (!previewFile) return;
+    const previewIsCdn = Boolean(previewFile.isCdn);
+    if (activeBin === "root") {
+      setPreviewFile(null);
+    } else if (activeBin === "cloud" && !previewIsCdn) {
+      setPreviewFile(null);
+    } else if (activeBin === "vault" && previewIsCdn) {
+      setPreviewFile(null);
+    }
+  }, [activeBin, previewFile, setPreviewFile]);
+
+  const isClientVaultRootSelected = activeBin === "root";
+
+  const galleryTitle = (() => {
+    if (isClientVaultRootSelected) {
+      return "Client Vault";
+    }
+
+    const folderLabel = currentFolder
+      ? currentFolder.replace(/\/+$/, "").split("/").pop()
+      : null;
+
+    if (activeBin === "cloud") {
+      return folderLabel ? `CDN / ${folderLabel}` : "All CDN Assets";
+    }
+    return folderLabel ? `Vault / ${folderLabel}` : "All Local Assets";
+  })();
+
+  const playerControlsDisabled = !previewFile?.isVideo;
+  const meterLufs = playerControlsDisabled ? -60 : lufs;
+
+  const handleClientVaultRoot = useCallback(() => {
+    setActiveBin("root");
+    setCurrentFolder("");
+  }, [setActiveBin, setCurrentFolder]);
+
   const folders = (vaultItems || []).filter((item) => !item?.metadata);
   const files = (vaultItems || []).filter((item) => item?.metadata);
   const filteredFiles = (files || []).filter((item) => {
@@ -700,20 +808,11 @@ export default function DashboardPage() {
     (f) => f?.name?.match(/\.(mp4|webm|ogg|mov|mxf)$/i) !== null,
   );
 
-  const aspectClass =
-    viewSettings.aspectRatio === "video"
-      ? "aspect-video"
-      : viewSettings.aspectRatio === "square"
-        ? "aspect-square"
-        : "aspect-[9/16]";
-
-  const playerSizeClass =
-    viewSettings.aspectRatio === "video"
-      ? "w-full h-auto max-h-full"
-      : "h-full w-auto max-w-full";
-
-  const objectFitClass =
-    viewSettings.thumbnailScale === "Fill" ? "object-cover" : "object-contain";
+  const {
+    aspectClass,
+    objectFitClass,
+    playerSizeClass,
+  } = useGalleryViewStyles();
 
   return (
     <main className="h-screen w-full bg-[#050505] text-gray-300 font-sans flex flex-col overflow-hidden relative">
@@ -735,6 +834,7 @@ export default function DashboardPage() {
         handleUpload={handleUpload}
         uploading={uploading}
         onToggleScreenShare={isScreenSharing ? stopScreenShare : startScreenShare}
+        onR2UploadSuccess={handleR2UploadSuccess}
       />
 
 
@@ -768,9 +868,11 @@ export default function DashboardPage() {
             >
               <VaultSidebar
                 currentFolder={currentFolder}
+                activeBin={activeBin}
                 allFolders={allFolders}
                 onFolderClick={setCurrentFolder}
-                onRootClick={() => setCurrentFolder("")}
+                onClientVaultRootClick={handleClientVaultRoot}
+                onBinChange={setActiveBin}
                 onCreateFolder={handleCreateFolder}
                 onDeleteFolder={onDeleteFolderUI}
               />
@@ -791,12 +893,12 @@ export default function DashboardPage() {
                 <div className="w-full h-14 flex items-center justify-between px-6 border-b border-white/5 bg-[#121217] shrink-0 z-20 relative">
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-medium text-gray-200 whitespace-nowrap">
-                      {currentFolder
-                        ? currentFolder.split("/").pop()
-                        : "All Assets"}
+                      {galleryTitle}
                     </h2>
                   </div>
                   <div className="flex items-center gap-4">
+                    {activeBin !== "root" && (
+                      <>
                     <div className="flex items-center bg-[#050505] border border-white/10 rounded-md p-0.5 shadow-inner">
                       <button onClick={() => setViewMode('list')} className={`p-1.5 rounded transition-all ${viewMode === 'list' ? 'bg-white/10 text-[#d4af37] shadow-sm' : 'text-gray-500 hover:text-white hover:bg-white/5'}`} title="List View">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
@@ -815,19 +917,72 @@ export default function DashboardPage() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="bg-[#050505] border border-white/10 rounded-md px-3 py-1.5 text-xs text-white w-full max-w-[200px]"
                     />
+                      </>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-                  <FileGrid
-                    filteredFiles={filteredFiles}
-                    currentFolder={currentFolder}
-                    fileUrls={fileUrls}
-                    onPreview={handlePreview}
-                    onRenameFile={onRenameFile}
-                    onDeleteFile={onDeleteFile}
-                    onMoveFile={onMoveFile}
-                  />
+                  {isClientVaultRootSelected ? (
+                    <div className="flex h-full min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-white/5 bg-[#0a0a0f]/40 px-6 py-16 text-center">
+                      <span className="mb-4 text-3xl opacity-30">📂</span>
+                      <p className="text-xs font-medium uppercase tracking-[0.25em] text-gray-500">
+                        Select a folder from the sidebar
+                      </p>
+                      <p className="mt-2 max-w-xs text-[11px] leading-relaxed text-gray-600">
+                        Open Cloud Delivery or Vault inside Client Vault to browse assets.
+                      </p>
+                    </div>
+                  ) : (
+                  <div key={activeBin} className="transition-opacity duration-200 ease-in-out">
+                    {activeBin === "cloud" ? (
+                      <section>
+                        <div className="mb-4 flex items-center justify-between">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#d4af37]">
+                              Cloud Delivery
+                            </p>
+                            <h3 className="mt-1 text-sm font-medium text-gray-200">
+                              CDN Assets
+                            </h3>
+                          </div>
+                          <span className="rounded-full border border-white/10 bg-[#121217] px-2.5 py-1 text-[10px] text-gray-500">
+                            {cloudAssets.length} file
+                            {cloudAssets.length === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        <GalleryBulkActionBar label="cloud" />
+                        <CloudAssetGallery
+                          assets={cloudAssets}
+                          loading={cloudAssetsLoading}
+                          searchQuery={searchQuery}
+                          onPreviewAsset={handleCloudAssetPreview}
+                        />
+                      </section>
+                    ) : (
+                      <section>
+                        <div className="mb-4">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#d4af37]">
+                            Vault
+                          </p>
+                          <h3 className="mt-1 text-sm font-medium text-gray-200">
+                            Local Storage
+                          </h3>
+                        </div>
+                        <GalleryBulkActionBar label="vault" />
+                        <FileGrid
+                          filteredFiles={filteredFiles}
+                          currentFolder={currentFolder}
+                          fileUrls={fileUrls}
+                          onPreview={handlePreview}
+                          onRenameFile={onRenameFile}
+                          onDeleteFile={onDeleteFile}
+                          onMoveFile={onMoveFile}
+                        />
+                      </section>
+                    )}
+                  </div>
+                  )}
                 </div>
               </section>
 
@@ -836,10 +991,41 @@ export default function DashboardPage() {
                 className="w-[3px] bg-white/5 hover:bg-[#d4af37] cursor-col-resize z-50 shrink-0 hidden lg:block"
               />
 
-              <div className={`flex flex-1 flex-col h-full bg-[#0a0a0f] overflow-hidden relative min-w-0 ${!previewFile ? "hidden lg:flex" : "flex"}`}>
-                {previewFile ? (
+              <div className="flex flex-1 flex-col h-full bg-[#0a0a0f] overflow-hidden relative min-w-0 flex">
+                {previewFile && (
                   <>
-                    {previewFile.isVideo && (
+                    {previewFile.isVideo && previewFile.isCdn && (
+                      <div className="w-full bg-[#1c1c24] border-b border-[#d4af37]/20 px-4 py-3 flex items-center justify-between z-30 shrink-0 shadow-md">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <button
+                            onClick={() => setPreviewFile(null)}
+                            className="shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-black/60 hover:bg-red-500 text-white transition-colors border border-white/10"
+                            title="Close Preview"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                          </button>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#d4af37]">
+                              CDN Preview
+                            </p>
+                            <p className="truncate text-sm text-white">{previewFile.name}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {previewFile.isVideo && !previewFile.isCdn && (
                       <div className="w-full bg-[#1c1c24] border-b border-[#d4af37]/20 p-2 lg:p-3 flex flex-col md:flex-row flex-wrap items-start md:items-center justify-between z-30 shrink-0 shadow-md gap-3">
                       <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto custom-scrollbar pb-1 md:pb-0">
                         <button
@@ -981,203 +1167,243 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   )}
+                  </>
+                )}
 
-                  <section className="flex-1 w-full flex flex-col lg:flex-row relative overflow-y-auto lg:overflow-hidden custom-scrollbar min-h-0">
+                <section className="flex-1 w-full flex flex-col lg:flex-row relative overflow-y-auto lg:overflow-hidden custom-scrollbar min-h-0">
                     <div className="flex-1 flex flex-row min-w-0 lg:overflow-hidden min-h-[40vh] lg:min-h-0 shrink-0">
                       <div className="flex-1 flex flex-col p-2 lg:p-4 overflow-hidden relative min-w-0">
-                        {previewFile.isVideo ? (
-                          <>
-                            <div
-                              className={`flex flex-1 w-full h-full justify-center items-center ${flags?.enable_compare_mode && isCompareMode ? "flex-col sm:flex-row gap-4" : "flex-col"} min-h-0 min-w-0 pb-4`}
-                            >
-                              <div
-                                className={`relative flex flex-col items-center justify-center min-h-0 min-w-0 overflow-hidden ${playerSizeClass} ${aspectClass}`}
-                              >
-                                {flags?.enable_compare_mode && isCompareMode && (
-                                  <span className="absolute top-2 left-2 bg-black/80 text-[#d4af37] text-[10px] px-2 py-1 rounded backdrop-blur border border-white/10 z-10 font-bold tracking-widest shadow-lg">
-                                    V2 (Current)
-                                  </span>
-                                )}
-                                <video
-                                  ref={videoRef}
-                                  src={previewFile.url}
-                                  crossOrigin="anonymous"
-                                  controls={
-                                    !(flags?.enable_compare_mode && isCompareMode)
-                                  }
-                                  className={`w-full h-full bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-lg border border-white/10 ${objectFitClass}`}
-                                />
-                              </div>
-
-                              {flags?.enable_compare_mode &&
-                                isCompareMode &&
-                                compareFile && (
-                                  <div
-                                    className={`relative flex flex-col items-center justify-center min-h-0 min-w-0 overflow-hidden ${playerSizeClass} ${aspectClass}`}
-                                  >
-                                    <span className="absolute top-2 left-2 bg-black/80 text-gray-300 text-[10px] px-2 py-1 rounded backdrop-blur border border-white/10 z-10 font-bold tracking-widest shadow-lg">
-                                      V1 (Reference)
-                                    </span>
-                                    <video
-                                      ref={compareVideoRef}
-                                      src={compareFile.url}
-                                      crossOrigin="anonymous"
-                                      muted
-                                      controls={false}
-                                      className={`w-full h-full bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-lg border border-white/10 ${objectFitClass}`}
-                                    />
-                                  </div>
-                                )}
+                        <div className="flex flex-1 w-full min-h-0 min-w-0 overflow-hidden">
+                          {!previewFile ? (
+                            <div className="flex flex-1 flex-col items-center justify-center w-full h-full text-gray-500 bg-[#0a0a0f] relative overflow-hidden rounded-lg border border-white/5">
+                              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+                              <span className="text-6xl mb-6 opacity-20 drop-shadow-2xl">🎞️</span>
+                              <p className="text-xs font-bold tracking-widest uppercase text-gray-500/50">
+                                Select an asset to preview
+                              </p>
                             </div>
-
-                            <div className="shrink-0 mx-auto flex flex-wrap justify-center items-center gap-2 sm:gap-4 bg-[#121217] border border-white/10 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-2xl text-xs select-none relative z-20 w-full max-w-2xl">
-                              <div className="hidden sm:flex items-center gap-2">
-                                <span className="text-gray-500 text-[10px] uppercase font-semibold">
-                                  Speed:
-                                </span>
-                                <select
-                                  onChange={(e) => {
-                                    if (videoRef.current)
-                                      videoRef.current.playbackRate = parseFloat(
-                                        e.target.value,
-                                      );
-                                  }}
-                                  defaultValue="1"
-                                  className="bg-[#050505] border border-white/10 rounded px-2 py-0.5 text-white text-[11px] outline-none cursor-pointer"
+                          ) : previewFile.isVideo ? (
+                            previewFile.isCdn ? (
+                              <div className="flex flex-1 w-full h-full justify-center items-center flex-col min-h-0 min-w-0">
+                                <div
+                                  className={`relative flex flex-col items-center justify-center min-h-0 min-w-0 overflow-hidden ${playerSizeClass} ${aspectClass}`}
                                 >
-                                  <option value="0.5">0.5x</option>
-                                  <option value="1">1.0x</option>
-                                  <option value="2">2.0x</option>
-                                </select>
-                              </div>
-                              <div className="hidden sm:block w-px h-4 bg-white/10"></div>
-
-                              <div className="flex items-center gap-1 sm:gap-2">
-                                <button
-                                  onClick={stepBackward}
-                                  className="px-2 py-1 bg-[#050505] hover:bg-[#d4af37]/20 border border-white/5 hover:border-[#d4af37]/30 text-gray-300 hover:text-[#d4af37] rounded"
-                                >
-                                  <svg
-                                    className="w-3 h-3 sm:w-4 sm:h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
+                                  <video
+                                    key={previewFile.publicUrl ?? previewFile.url}
+                                    ref={videoRef}
+                                    src={previewFile.publicUrl ?? previewFile.url}
+                                    controls={false}
+                                    autoPlay
+                                    playsInline
+                                    preload="auto"
+                                    className={`w-full h-full bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-lg border border-white/10 ${objectFitClass}`}
                                   >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M15 19l-7-7 7-7"
-                                    />
-                                  </svg>
-                                </button>
-                                <div className="font-mono text-[10px] sm:text-[11px] text-[#d4af37] font-medium tracking-widest px-2 py-1 bg-[#050505] rounded border border-white/10">
-                                  {smpteTimecode}
+                                    <VideoCaptionTracks tracks={activeSubtitleTracks} />
+                                  </video>
                                 </div>
-                                <button
-                                  onClick={stepForward}
-                                  className="px-2 py-1 bg-[#050505] hover:bg-[#d4af37]/20 border border-white/5 hover:border-[#d4af37]/30 text-gray-300 hover:text-[#d4af37] rounded"
-                                >
-                                  <svg
-                                    className="w-3 h-3 sm:w-4 sm:h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M9 5l7 7-7 7"
-                                    />
-                                  </svg>
-                                </button>
                               </div>
-
-                              <div className="w-px h-4 bg-white/10"></div>
-
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => {
-                                    if (videoRef.current)
-                                      videoRef.current.currentTime = Math.max(
-                                        0,
-                                        videoRef.current.currentTime - 5,
-                                      );
-                                  }}
-                                  className="px-1 sm:px-2 py-1 bg-[#050505] border border-white/5 hover:text-white rounded text-[9px] sm:text-[10px] font-mono"
-                                >
-                                  -5s
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if (videoRef.current)
-                                      videoRef.current.currentTime = Math.min(
-                                        videoRef.current.duration,
-                                        videoRef.current.currentTime + 5,
-                                      );
-                                  }}
-                                  className="px-1 sm:px-2 py-1 bg-[#050505] border border-white/5 hover:text-white rounded text-[9px] sm:text-[10px] font-mono"
-                                >
-                                  +5s
-                                </button>
-                              </div>
-
-                              <div className="w-px h-4 bg-white/10"></div>
-
-                              <button
-                                onClick={handleTogglePlay}
-                                className="px-3 sm:px-4 py-1.5 bg-[#d4af37] text-black font-bold text-[9px] sm:text-[10px] uppercase rounded-full tracking-widest hover:scale-105 transition-transform shadow-md truncate"
+                            ) : (
+                              <div
+                                className={`flex flex-1 w-full h-full justify-center items-center ${flags?.enable_compare_mode && isCompareMode ? "flex-col sm:flex-row gap-4" : "flex-col"} min-h-0 min-w-0`}
                               >
-                                Play / Pause
-                              </button>
+                                <div
+                                  className={`relative flex flex-col items-center justify-center min-h-0 min-w-0 overflow-hidden ${playerSizeClass} ${aspectClass}`}
+                                >
+                                  {flags?.enable_compare_mode && isCompareMode && (
+                                    <span className="absolute top-2 left-2 bg-black/80 text-[#d4af37] text-[10px] px-2 py-1 rounded backdrop-blur border border-white/10 z-10 font-bold tracking-widest shadow-lg">
+                                      V2 (Current)
+                                    </span>
+                                  )}
+                                  <video
+                                    ref={videoRef}
+                                    src={previewFile.url}
+                                    crossOrigin="anonymous"
+                                    controls={false}
+                                    className={`w-full h-full bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-lg border border-white/10 ${objectFitClass}`}
+                                  >
+                                    <VideoCaptionTracks tracks={activeSubtitleTracks} />
+                                  </video>
+                                </div>
+
+                                {flags?.enable_compare_mode &&
+                                  isCompareMode &&
+                                  compareFile && (
+                                    <div
+                                      className={`relative flex flex-col items-center justify-center min-h-0 min-w-0 overflow-hidden ${playerSizeClass} ${aspectClass}`}
+                                    >
+                                      <span className="absolute top-2 left-2 bg-black/80 text-gray-300 text-[10px] px-2 py-1 rounded backdrop-blur border border-white/10 z-10 font-bold tracking-widest shadow-lg">
+                                        V1 (Reference)
+                                      </span>
+                                      <video
+                                        ref={compareVideoRef}
+                                        src={compareFile.url}
+                                        crossOrigin="anonymous"
+                                        muted
+                                        controls={false}
+                                        className={`w-full h-full bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-lg border border-white/10 ${objectFitClass}`}
+                                      />
+                                    </div>
+                                  )}
+                              </div>
+                            )
+                          ) : (
+                            <div className="w-full h-full flex justify-center items-center min-h-0 min-w-0">
+                              <img
+                                src={previewFile.publicUrl ?? previewFile.url}
+                                alt={previewFile.name}
+                                className={`bg-black rounded shadow-2xl border border-white/5 ${playerSizeClass} ${aspectClass} ${objectFitClass}`}
+                              />
                             </div>
-                          </>
-                        ) : (
-                          <div className="w-full h-full flex justify-center items-center pb-4 min-h-0 min-w-0">
-                            <img
-                              src={previewFile.url}
-                              className={`bg-black rounded shadow-2xl border border-white/5 ${playerSizeClass} ${aspectClass} ${objectFitClass}`}
-                            />
+                          )}
+                        </div>
+
+                        <div className="shrink-0 mx-auto mt-3 w-full max-w-2xl min-w-0 flex flex-col gap-2 z-20">
+                          <VideoTimelineScrubber
+                            videoRef={videoRef}
+                            disabled={playerControlsDisabled}
+                            mediaKey={
+                              previewFile?.publicUrl ??
+                              previewFile?.url ??
+                              ""
+                            }
+                          />
+                        <fieldset
+                          disabled={playerControlsDisabled}
+                          className={`flex flex-wrap justify-center items-center gap-2 sm:gap-4 bg-[#121217] border border-white/10 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-2xl text-xs select-none relative w-full min-w-0 ${playerControlsDisabled ? "opacity-50" : ""}`}
+                        >
+                          <div className="hidden sm:flex items-center gap-2">
+                            <span className="text-gray-500 text-[10px] uppercase font-semibold">
+                              Speed:
+                            </span>
+                            <select
+                              onChange={(e) => {
+                                if (videoRef.current)
+                                  videoRef.current.playbackRate = parseFloat(
+                                    e.target.value,
+                                  );
+                              }}
+                              defaultValue="1"
+                              className="bg-[#050505] border border-white/10 rounded px-2 py-0.5 text-white text-[11px] outline-none cursor-pointer disabled:cursor-not-allowed"
+                            >
+                              <option value="0.5">0.5x</option>
+                              <option value="1">1.0x</option>
+                              <option value="2">2.0x</option>
+                            </select>
                           </div>
-                        )}
+                          <div className="hidden sm:block w-px h-4 bg-white/10" />
+
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <button
+                              type="button"
+                              onClick={stepBackward}
+                              className="px-2 py-1 bg-[#050505] hover:bg-[#d4af37]/20 border border-white/5 hover:border-[#d4af37]/30 text-gray-300 hover:text-[#d4af37] rounded disabled:hover:bg-[#050505] disabled:hover:text-gray-300"
+                            >
+                              <svg
+                                className="w-3 h-3 sm:w-4 sm:h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 19l-7-7 7-7"
+                                />
+                              </svg>
+                            </button>
+                            <div className="font-mono text-[10px] sm:text-[11px] text-[#d4af37] font-medium tracking-widest px-2 py-1 bg-[#050505] rounded border border-white/10">
+                              {playerControlsDisabled ? "00:00:00:00" : smpteTimecode}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={stepForward}
+                              className="px-2 py-1 bg-[#050505] hover:bg-[#d4af37]/20 border border-white/5 hover:border-[#d4af37]/30 text-gray-300 hover:text-[#d4af37] rounded disabled:hover:bg-[#050505] disabled:hover:text-gray-300"
+                            >
+                              <svg
+                                className="w-3 h-3 sm:w-4 sm:h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+
+                          <div className="w-px h-4 bg-white/10" />
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (videoRef.current)
+                                  videoRef.current.currentTime = Math.max(
+                                    0,
+                                    videoRef.current.currentTime - 5,
+                                  );
+                              }}
+                              className="px-1 sm:px-2 py-1 bg-[#050505] border border-white/5 hover:text-white rounded text-[9px] sm:text-[10px] font-mono disabled:hover:text-gray-300"
+                            >
+                              -5s
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (videoRef.current)
+                                  videoRef.current.currentTime = Math.min(
+                                    videoRef.current.duration,
+                                    videoRef.current.currentTime + 5,
+                                  );
+                              }}
+                              className="px-1 sm:px-2 py-1 bg-[#050505] border border-white/5 hover:text-white rounded text-[9px] sm:text-[10px] font-mono disabled:hover:text-gray-300"
+                            >
+                              +5s
+                            </button>
+                          </div>
+
+                          <div className="w-px h-4 bg-white/10" />
+
+                          <button
+                            type="button"
+                            onClick={handleTogglePlay}
+                            className="px-3 sm:px-4 py-1.5 bg-[#d4af37] text-black font-bold text-[9px] sm:text-[10px] uppercase rounded-full tracking-widest hover:scale-105 transition-transform shadow-md truncate disabled:opacity-60 disabled:hover:scale-100"
+                          >
+                            Play / Pause
+                          </button>
+                        </fieldset>
+                        </div>
                       </div>
 
-                      {previewFile.isVideo && (
-                        <div className="shrink-0 w-16 h-full hidden md:flex flex-col justify-center border-l border-white/5 bg-[#0a0a0f] p-2 z-20">
-                          <LUFSMeter lufs={lufs} />
-                        </div>
-                      )}
+                      <div className="shrink-0 w-16 h-full hidden md:flex flex-col justify-center border-l border-white/5 bg-[#0a0a0f] p-2 z-20">
+                        <LUFSMeter lufs={meterLufs} />
+                      </div>
                     </div>
 
-                      {previewFile.isVideo && (
-                        <div className="w-full lg:w-[320px] shrink-0 bg-[#121217] border-t lg:border-t-0 lg:border-l border-white/5 z-40 flex flex-col min-h-[500px] lg:min-h-0 lg:h-full">
-                          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-                            <CommentsPanel
-                              isLive={isLive}
-                              comments={comments}
-                              newComment={newComment}
-                              setNewComment={setNewComment}
-                              handleAddComment={handleAddComment}
-                              handleEditComment={handleEditComment}
-                              handleDeleteComment={handleDeleteComment}
-                              handleNotifyTeam={handleNotifyTeam}
-                              isNotifying={isNotifying}
-                              notificationSent={notificationSent}
-                              jumpToTime={jumpToTime}
-                            />
-                          </div>
-                        </div>
-                      )}
+                    <div className="w-full lg:w-[320px] shrink-0 bg-[#121217] border-t lg:border-t-0 lg:border-l border-white/5 z-40 flex flex-col min-h-[500px] lg:min-h-0 lg:h-full">
+                      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col min-h-0">
+                        <CommentsPanel
+                          disabled={playerControlsDisabled}
+                          isLive={isLive}
+                          comments={comments}
+                          newComment={newComment}
+                          setNewComment={setNewComment}
+                          handleAddComment={handleAddComment}
+                          handleEditComment={handleEditComment}
+                          handleDeleteComment={handleDeleteComment}
+                          handleNotifyTeam={handleNotifyTeam}
+                          isNotifying={isNotifying}
+                          notificationSent={notificationSent}
+                          jumpToTime={jumpToTime}
+                        />
+                      </div>
+                    </div>
                     </section>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center w-full h-full text-gray-500 bg-[#0a0a0f] relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/5 via-transparent to-transparent opacity-50 pointer-events-none"></div>
-                    <span className="text-6xl mb-6 opacity-20 drop-shadow-2xl">🎞️</span>
-                    <p className="text-xs font-bold tracking-widest uppercase text-gray-500/50">Select an asset to preview</p>
-                  </div>
-                )}
               </div>
             </div>
           </>
@@ -1235,6 +1461,8 @@ export default function DashboardPage() {
         currentPath={currentFolder}
         folders={allFolders}
       />
+
+      <ToastHost />
     </main>
   );
 }

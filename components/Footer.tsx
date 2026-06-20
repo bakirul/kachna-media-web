@@ -8,16 +8,16 @@ export default function Footer() {
         <div className="flex flex-col items-center md:items-start gap-2">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 border border-gold-primary flex items-center justify-center">
-              <span className="text-gold-primary text-[10px] font-display font-bold">
-                K
+              <span className="text-gold-primary text-[10px] font-display font-bold" aria-hidden="true">
+                R
               </span>
             </div>
             <span className="text-sm font-display tracking-widest uppercase text-white">
-              Kachna Media
+              Rendorax
             </span>
           </div>
           <p className="text-[10px] uppercase tracking-widest text-text-gray mt-1">
-            © {new Date().getFullYear()} Kachna Media Limited. All rights
+            © {new Date().getFullYear()} Rendorax Limited. All rights
             reserved.
           </p>
         </div>

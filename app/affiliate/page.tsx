@@ -50,7 +50,7 @@ export default function AffiliatePage() {
               Earn Premium Rev-Share.
             </h1>
             <p className="text-text-gray text-sm mt-4 leading-relaxed">
-              The Kachna Media Partner Network is an invite-only program
+              The Rendorax Partner Network is an invite-only program
               reserved for top-tier agency owners, independent producers, and
               elite B2B connectors. We hold our broadcast standards high, and
               our vetting process for partners reflects that exact commitment.

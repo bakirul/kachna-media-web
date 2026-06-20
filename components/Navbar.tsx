@@ -9,7 +9,6 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  // Navigation links mapped for SEO architecture
   const navLinks = [
     { name: "About", path: "/studio" },
     { name: "Work", path: "/portfolio" },
@@ -22,19 +21,19 @@ export default function Navbar() {
   return (
     <div className="container mx-auto px-6">
       <nav className="flex items-center justify-between w-full py-6 relative z-50">
-        {/* 1. Brand Logo */}
-        <Link href="/" className="block shrink-0">
+        <Link href="/" className="flex items-center gap-2 shrink-0">
           <Image
-            src="/assets/logo.png"
-            alt="Kachna Media"
-            width={150}
-            height={75}
-            className="h-[50px] md:h-[75px] w-auto transition-transform hover:scale-105"
-            priority
+            alt="Rendorax Logo"
+            className="object-contain"
+            height={32}
+            src="/assets/logo.svg"
+            width={32}
           />
+          <span className="font-display text-lg md:text-xl tracking-[0.2em] uppercase text-white">
+            Rendorax
+          </span>
         </Link>
 
-        {/* 2. Hamburger Icon (Mobile) */}
         <div
           className="md:hidden flex flex-col gap-[6px] cursor-pointer z-[101]"
           onClick={() => setIsOpen(!isOpen)}
@@ -56,7 +55,6 @@ export default function Navbar() {
           ></span>
         </div>
 
-        {/* 3. Navigation Links & Buttons */}
         <div
           className={`
             absolute md:static top-full left-0 w-full md:w-auto
@@ -85,9 +83,7 @@ export default function Navbar() {
             );
           })}
 
-          {/* 🌟 4. Action Buttons (Client Login & Legacy Protocol) 🌟 */}
           <div className="flex flex-col md:flex-row items-center gap-4 mt-4 md:mt-0 md:ml-4">
-            {/* New: Client Vault Login Button */}
             <Link
               href="/access"
               className="px-5 py-2.5 border border-gold-primary text-gold-primary text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-300 hover:bg-gold-primary hover:text-black rounded-sm"
@@ -96,14 +92,13 @@ export default function Navbar() {
               Client Login
             </Link>
 
-            {/* Existing: Legacy Protocol */}
             <a
-              href="https://app.kachnamedia.com"
+              href="https://app.rendorax.com"
               className="group px-5 py-2.5 border border-gold-primary/40 bg-gold-primary/5 text-gold-primary text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-2.5 transition-all duration-500 hover:bg-gold-primary hover:text-black hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] shadow-[0_0_15px_rgba(212,175,55,0.05)] rounded-sm"
               onClick={() => setIsOpen(false)}
             >
               <span className="w-1.5 h-1.5 bg-gold-primary rounded-full animate-pulse group-hover:bg-black group-hover:animate-none"></span>
-              Legacy Protocol
+              Rendorax Studio
             </a>
           </div>
         </div>

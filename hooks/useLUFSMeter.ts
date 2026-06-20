@@ -11,8 +11,7 @@ export const useLUFSMeter = (
 
   useEffect(() => {
     const video = videoRef.current;
-    // যদি ভিডিও না থাকে, তাহলে এখান থেকেই ফিরে যাবে
-    if (!video) return;
+    if (!video || !fileUrl) return;
 
     let sourceNode: MediaElementAudioSourceNode;
     let workletNode: AudioWorkletNode;

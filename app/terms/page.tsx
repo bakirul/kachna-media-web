@@ -32,7 +32,7 @@ export default function TermsAndConditionsPage() {
             </h2>
             <p className="text-text-gray">
               By initiating a project briefing, signing a studio contract, or
-              transmitting production assets to Kachna Media Limited, you agree
+              transmitting production assets to Rendorax Limited, you agree
               to be legally bound by these Terms and Conditions. Our services
               encompass broadcast-grade video editing, cinematic color grading,
               sound design, LUFS-compliant audio mastering, animation continuity
@@ -94,7 +94,7 @@ export default function TermsAndConditionsPage() {
             <p className="text-text-gray">
               The Client is entirely responsible for the integrity, legal
               clearance, and backup of all source footage, offline files, and
-              music licenses transmitted to our secure servers. Kachna Media
+              music licenses transmitted to our secure servers. Rendorax
               Limited implements secure data storage protocols for active
               projects. However, we do not provide permanent cloud hosting.
               Unless otherwise agreed upon via a custom retainer contract, all
@@ -139,7 +139,7 @@ export default function TermsAndConditionsPage() {
             <p className="text-text-gray">
               Upon final balance clearance, full copyright ownership of the
               finished post-production master is transferred to the Client.
-              Kachna Media Limited retains the perpetual, non-exclusive right to
+              Rendorax Limited retains the perpetual, non-exclusive right to
               utilize excerpts, behind-the-scenes timelines, and watermarked
               sequences of the completed works solely for studio portfolio
               showreels, case studies, and promotional self-marketing, unless
@@ -175,7 +175,7 @@ export default function TermsAndConditionsPage() {
             </p>
             <div className="bg-black border border-white/10 p-6 rounded-sm">
               <p className="text-sm text-text-gray font-mono leading-loose">
-                <strong className="text-white">Kachna Media Limited</strong>
+                <strong className="text-white">Rendorax Limited</strong>
                 <br />
                 Operations & Compliance Hub
                 <br />
@@ -183,10 +183,10 @@ export default function TermsAndConditionsPage() {
                 <br />
                 Contact:{" "}
                 <a
-                  href="mailto:legal@kachnamedia.com"
+                  href="mailto:legal@rendorax.com"
                   className="text-gold-primary hover:text-white transition-colors"
                 >
-                  legal@kachnamedia.com
+                  legal@rendorax.com
                 </a>
               </p>
             </div>

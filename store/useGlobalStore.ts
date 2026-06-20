@@ -14,7 +14,7 @@ interface GlobalState {
 export const useGlobalStore = create<GlobalState>((set) => ({
   isMicActive: false,
   setIsMicActive: (active) => set({ isMicActive: active }),
-  selectedLanguage: 'en',
+  selectedLanguage: 'en-US',
   setSelectedLanguage: (lang) => set({ selectedLanguage: lang }),
   isLiveSessionActive: false,
   setIsLiveSessionActive: (active) => set({ isLiveSessionActive: active }),

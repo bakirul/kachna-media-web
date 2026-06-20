@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { Socket } from "socket.io-client";
+import { useGlobalStore } from "@/store/useGlobalStore";
+import { resolveSpeechLanguage } from "@/utils/languageCodes";
 
 interface TimelineShareWidgetProps {
   cinemaVideoRef: React.RefObject<HTMLVideoElement>;
@@ -8,22 +10,11 @@ interface TimelineShareWidgetProps {
   isEditor?: boolean;
 }
 
-const SUPPORTED_LANGUAGES = [
-  { label: "Bengali", geminiName: "Bengali", ttsCode: "bn-BD" },
-  { label: "English", geminiName: "English", ttsCode: "en-US" },
-  { label: "Hindi", geminiName: "Hindi", ttsCode: "hi-IN" },
-  { label: "Spanish", geminiName: "Spanish", ttsCode: "es-ES" },
-  { label: "Arabic", geminiName: "Arabic", ttsCode: "ar-SA" }
-];
-
 const TimelineShareWidget = React.memo(({ cinemaVideoRef, socket, isEditor }: TimelineShareWidgetProps) => {
   const [liveSubtitle, setLiveSubtitle] = useState<string | null>(null);
-  const [selectedLang, setSelectedLang] = useState(SUPPORTED_LANGUAGES[0]);
+  const selectedLanguage = useGlobalStore((state) => state.selectedLanguage);
+  const speechLanguage = resolveSpeechLanguage(selectedLanguage);
   const subtitleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    console.log("[DEBUG: UI Mount] Timeline Widget Mounted");
-  }, []);
 
   // Admin Side: Listen to translation and speak
   useEffect(() => {
@@ -40,22 +31,22 @@ const TimelineShareWidget = React.memo(({ cinemaVideoRef, socket, isEditor }: Ti
       }, 5000);
 
       // Audio Playback (TTS)
-      if ('speechSynthesis' in window) {
+      if ("speechSynthesis" in window) {
         const utterance = new SpeechSynthesisUtterance(data.translated);
-        utterance.lang = selectedLang.ttsCode;
+        utterance.lang = speechLanguage.sttCode;
         window.speechSynthesis.speak(utterance);
       }
     };
 
-    socket.on('receive-translated-speech', handleTranslation);
+    socket.on("receive-translated-speech", handleTranslation);
 
     return () => {
-      socket.off('receive-translated-speech', handleTranslation);
+      socket.off("receive-translated-speech", handleTranslation);
       if (subtitleTimeoutRef.current) {
         clearTimeout(subtitleTimeoutRef.current);
       }
     };
-  }, [socket, isEditor, selectedLang]);
+  }, [socket, isEditor, speechLanguage.sttCode]);
 
   return (
     <div className="flex-1 h-full w-full bg-black relative flex items-center justify-center animate-fade-in">
@@ -75,20 +66,9 @@ const TimelineShareWidget = React.memo(({ cinemaVideoRef, socket, isEditor }: Ti
           <span>Cinema Mode: Live Editing Share</span>
         </div>
         {isEditor && (
-          <select 
-            value={selectedLang.ttsCode}
-            onChange={(e) => {
-              const lang = SUPPORTED_LANGUAGES.find(l => l.ttsCode === e.target.value);
-              if (lang) setSelectedLang(lang);
-            }}
-            className="bg-black/50 text-[#d4af37] text-[9px] border border-[#d4af37]/40 rounded px-2 py-1 outline-none font-bold uppercase mt-1 w-fit cursor-pointer hover:bg-white/10 transition-colors"
-          >
-            {SUPPORTED_LANGUAGES.map(lang => (
-              <option key={lang.ttsCode} value={lang.ttsCode} className="bg-black">
-                Hear in: {lang.label}
-              </option>
-            ))}
-          </select>
+          <span className="text-[9px] font-bold uppercase text-[#d4af37]/80">
+            Hear in: {speechLanguage.geminiName}
+          </span>
         )}
       </div>
 
